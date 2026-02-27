@@ -18,20 +18,21 @@ const GoogleCallback = () => {
     const checkAuthState = async () => {
       try {
         console.log("📍 GoogleCallback - Estado actual:", {
-          hasAccessToken: !!auth.accessToken,
+          hasTokens: !!auth.tokens,
           hasGoogleInfo: !!auth.googleId,
           googleId: auth.googleId,
-          email: auth.email
+          email: auth.email,
+          isAuthenticated: auth.isAuthenticated
         });
         
         // Esperar un poco para que Redux se actualice
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        if (auth.googleId && auth.email && !auth.accessToken) {
+        if (auth.googleId && auth.email && !auth.tokens) {
           // Usuario nuevo - ir a crear perfil
           console.log("✅ Usuario nuevo - googleId:", auth.googleId);
           navigate("/profile", { replace: true });
-        } else if (auth.accessToken) {
+        } else if (auth.tokens) {
           // Usuario existente - ir al feed
           console.log("✅ Usuario existente con token");
           navigate("/feed", { replace: true });

@@ -1,69 +1,78 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAppDispatch";
-import { setTokens, setGoogleInfo, setError } from "@/store/slices/authSlice";
+import { useAuth } from "@/hooks/useAuth";
 import logoColor from "@/assets/logo-color.png";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const auth = useAppSelector((state) => state.auth);
-  const calledRef = useRef(false);
+  const { handleGoogleCallback } = useAuth();
+  const processedRef = useRef(false);
 
   useEffect(() => {
-    if (calledRef.current) return;
-    calledRef.current = true;
+    if (processedRef.current) return;
+    processedRef.current = true;
 
     const processCallback = async () => {
       try {
-        // Leer parámetros de la URL
+        console.log("📍 AuthCallback - Leyendo datos de URL params...");
+        
+        // Leer datos de query params
         const params = new URLSearchParams(window.location.search);
-        const email = params.get("email");
-        const google_id = params.get("google_id");
-        const error = params.get("error");
+        const authError = params.get("authError");
+        const authDataJson = params.get("authData");
+        
+        console.log("🔍 URL params:", {
+          authError: !!authError,
+          authData: !!authDataJson,
+          url: window.location.href
+        });
 
-        console.log("🔍 AuthCallback - Parámetros:", { email, google_id, error });
-
-        // Si hay error, mostrar y volver a login
-        if (error) {
-          console.error("❌ Error del backend:", error);
-          dispatch(setError(`Error en Google: ${error}`));
-          setTimeout(() => navigate("/login", { replace: true }), 2000);
+        // Si hay error del backend
+        if (authError) {
+          console.error("❌ Error del backend:", authError);
+          // Mostrar error y redirigir a login
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          navigate("/login", { replace: true });
           return;
         }
 
-        // Caso 1: Usuario NUEVO (pasado en query params)
-        if (email && google_id) {
-          console.log("✅ Usuario nuevo detectado");
-          dispatch(setGoogleInfo({ googleId: google_id, email }));
+        if (!authDataJson) {
+          throw new Error("No se encontraron datos de autenticación en URL");
+        }
+
+        // Parsear el JSON
+        const authData = JSON.parse(authDataJson);
+        console.log("✅ Datos parseados:", {
+          is_new_user: authData.is_new_user,
+          email: authData.email,
+          has_token: !!authData.access_token,
+        });
+
+        // Guardar en localStorage para que useAuth lo lea
+        localStorage.setItem("authData", JSON.stringify(authData));
+        
+        // Llamar handleGoogleCallback que lee de localStorage
+        const result = await handleGoogleCallback();
+        console.log("✅ Callback procesado:", result);
+
+        // Esperar a que Redux se actualice
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        if (result.isNewUser) {
+          console.log("➡️ Redirigiendo a /profile (usuario nuevo)");
           navigate("/profile", { replace: true });
-          return;
-        }
-
-        // Caso 2: Usuario EXISTENTE (token en cookie)
-        // El token se envió en cookie httponly, axios lo envía automáticamente en los siguientes requests
-        if (!email && !google_id) {
-          console.log("✅ Usuario existente - verificando token en cookies");
-          
-          // Esperar un poco para que el Redux se actualice
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // El backend guardó el token en cookie, ahora podemos navegar al feed
+        } else {
+          console.log("➡️ Redirigiendo a /feed (usuario existente)");
           navigate("/feed", { replace: true });
-          return;
         }
-
-        console.warn("⚠️ No se pudo determinar el estado del usuario");
-        navigate("/login", { replace: true });
       } catch (error) {
         console.error("❌ Error en AuthCallback:", error);
-        dispatch(setError("Error procesando autenticación"));
         navigate("/login", { replace: true });
       }
     };
 
     processCallback();
-  }, [navigate, dispatch]);
+  }, [navigate, handleGoogleCallback]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">

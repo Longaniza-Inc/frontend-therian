@@ -66,15 +66,36 @@ const THERIAN_EMOJIS: Record<string, string> = {
   apoyo: "💚",
 };
 
-async function sendSwipeAction(_payload: SwipePayload): Promise<void> {
-  console.log("Swipe action:", _payload);
+async function sendSwipeAction(payload: SwipePayload, liker_id: number): Promise<void> {
+  console.log("📤 Swipe action:", payload);
+  
+  if (payload.action === "like") {
+    try {
+      const liked_id = parseInt(payload.targetUserId);
+      const result = await FeedService.likear(liker_id, liked_id, true);
+      
+      if (result.hubo_match) {
+        console.log("🔥 ¡MATCH! id_match:", result.id_match, "id_chat:", result.id_chat);
+        // TODO: Mostrar notificación de match
+      } else {
+        console.log("👍 Like enviado al usuario:", liked_id);
+      }
+    } catch (error) {
+      console.error("❌ Error al enviar like:", error);
+    }
+  } else if (payload.action === "dislike") {
+    console.log("👎 Dislike a usuario:", payload.targetUserId);
+    // TODO: Implementar dislike en backend si es necesario
+  }
 }
 
 /**
  * Transformar datos del backend a FeedCard
  */
 function transformBackendUserToFeedCard(user: any): FeedCard {
-  return {
+  console.log("🔄 Transformando usuario del backend:", user);
+  
+  const feedCard: FeedCard = {
     id: String(user.id_usuario || user.id),
     name: user.nombre_usuario || user.nombre || "Usuario",
     age: user.edad || 0,
@@ -98,6 +119,16 @@ function transformBackendUserToFeedCard(user: any): FeedCard {
       },
     ],
   };
+  
+  console.log("✅ FeedCard transformada:", {
+    id: feedCard.id,
+    name: feedCard.name,
+    age: feedCard.age,
+    therianType: feedCard.therianType,
+    photosCount: feedCard.photos.length
+  });
+  
+  return feedCard;
 }
 
 const Feed = () => {
@@ -121,42 +152,84 @@ const Feed = () => {
 
   // Cargar usuarios del feed
   useEffect(() => {
+    console.log("🎬 Feed.tsx - useEffect ejecutado");
+    console.log("👤 Estado de auth completo:", {
+      tokens: !!auth.tokens,
+      googleId: auth.googleId,
+      email: auth.email,
+      isAuthenticated: auth.isAuthenticated
+    });
+
     const loadFeed = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Usar el email o id de Google como id del usuario
-        const userId = parseInt(auth.googleId || "1");
-        console.log("📡 Cargando feed para usuario:", userId);
+        // Obtener userId: prioridad a auth.userId del registro/JWT
+        let userId: number | null = null;
+        
+        if (auth.userId) {
+          userId = auth.userId;
+          console.log("✅ Usando userId del registro/JWT:", userId);
+        }
+
+        if (!userId) {
+          console.error("❌ No hay userId disponible, auth.userId:", auth.userId);
+          setError("Usuario no autenticado o sin información completa");
+          setLoading(false);
+          return;
+        }
+
+        console.log("🎬 Iniciando carga de feed para userId del usuario autenticado:", userId);
 
         // Obtener usuarios recomendados sin filtros por el momento
         const response = await FeedService.getFeed(userId);
+        console.log("📦 Response en Feed.tsx:", response);
         
         // Transformar datos del backend a FeedCard
         const feedCards = (response.users || []).map(transformBackendUserToFeedCard);
-        console.log("✅ Feed cargado con", feedCards.length, "usuarios");
+        console.log("🎴 Feed cargado:", {
+          totalUsuarios: feedCards.length,
+          usuarios: feedCards.map(u => ({ id: u.id, name: u.name, age: u.age }))
+        });
         
         setCards(feedCards);
       } catch (err: any) {
-        console.error("❌ Error al cargar el feed:", err);
+        console.error("❌ Error en Feed.tsx al cargar feed:", err);
         setError(err.message || "Error al cargar el feed");
-        // Mantener los mock cards como fallback
         setCards([]);
       } finally {
         setLoading(false);
       }
     };
 
-    if (auth.googleId) {
+    // Ejecutar si hay auth (userId O googleId O tokens)
+    if (auth.userId || auth.googleId || auth.tokens) {
       loadFeed();
+    } else {
+      console.warn("⚠️ No hay autenticación (ni userId, ni googleId ni tokens)");
+      setLoading(false);
+      setError("No autenticado");
     }
-  }, [auth.googleId]);
+  }, [auth.userId, auth.googleId, auth.tokens]);
 
   const currentCard = cards[currentIndex];
 
   const handleAction = (action: SwipeAction) => {
     if (!currentCard) return;
+
+    // Obtener el userId del usuario autenticado
+    let userId: number | null = null;
+    if (auth.userId) {
+      userId = auth.userId;
+    } else if (auth.googleId) {
+      userId = parseInt(auth.googleId);
+    }
+
+    if (!userId) {
+      console.error("❌ No hay userId disponible para hacer like/dislike");
+      return;
+    }
 
     if (action === "undo") {
       if (lastAction && currentIndex > 0) {
@@ -169,11 +242,11 @@ const Feed = () => {
     }
 
     if (action === "report") {
-      sendSwipeAction({ targetUserId: currentCard.id, action: "report" });
+      sendSwipeAction({ targetUserId: currentCard.id, action: "report" }, userId);
       return;
     }
 
-    sendSwipeAction({ targetUserId: currentCard.id, action });
+    sendSwipeAction({ targetUserId: currentCard.id, action }, userId);
     setLastAction({ index: currentIndex, action });
     setCurrentIndex((prev) => prev + 1);
     setPhotoIndex(0);

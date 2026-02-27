@@ -1,0 +1,91 @@
+import { useEffect, useRef, useCallback, useMemo } from "react";
+import { chatService } from "@/services/chatService";
+import { useAppSelector, useAppDispatch } from "./useAppDispatch";
+import { useWebSocket } from "@/providers/WebSocketProvider";
+import {
+  setMessagesForChat,
+  markHistoryRequested,
+  markChatRead,
+} from "@/store/slices/chatSlice";
+
+/**
+ * Hook para un chat específico.
+ *
+ * - Lee mensajes desde Redux (NO estado local).
+ * - Pide al WebSocketProvider que abra el WS (idempotente, persiste toda la sesión).
+ * - Carga historial REST solo si no está ya en Redux.
+ * - Marca como leído al entrar.
+ * - Envía mensajes a través del Provider.
+ *
+ * NO abre ni cierra WebSockets. Eso lo hace el Provider.
+ */
+export const useChat = (chatId: number | null) => {
+  const auth = useAppSelector((state) => state.auth);
+  const messagesByChat = useAppSelector((state) => state.chat.messagesByChat);
+  const mensajes = useMemo(
+    () => (chatId ? messagesByChat[chatId] ?? [] : []),
+    [chatId, messagesByChat]
+  );
+  const hasMessages = chatId ? messagesByChat[chatId] !== undefined : false;
+  const historyRequested = useAppSelector((state) =>
+    chatId ? !!state.chat.historyRequested[chatId] : false
+  );
+  const isLoadingHistory = historyRequested && !hasMessages;
+  const dispatch = useAppDispatch();
+  const { ensureChatWs, sendMessage, isChatConnected } = useWebSocket();
+
+  const markedReadRef = useRef<number | null>(null);
+
+  // ── 1. Cargar historial REST solo si NO está en Redux y NO fue pedido ya ──
+  useEffect(() => {
+    if (!chatId || !auth.isAuthenticated || hasMessages || historyRequested) return;
+
+    dispatch(markHistoryRequested(chatId));
+
+    const cargar = async () => {
+      try {
+        console.log("📥 useChat - Cargando historial REST:", chatId);
+        const data = await chatService.obtenerHistorial(chatId);
+        dispatch(setMessagesForChat({ chatId, mensajes: Array.isArray(data) ? data : [] }));
+      } catch (err) {
+        console.error("❌ Error cargando historial:", err);
+        dispatch(setMessagesForChat({ chatId, mensajes: [] }));
+      }
+    };
+
+    cargar();
+  }, [chatId, auth.isAuthenticated, hasMessages, historyRequested, dispatch]);
+
+  // ── 2. Pedir al Provider que abra WS (idempotente) ─────────
+  useEffect(() => {
+    if (!chatId || !auth.isAuthenticated) return;
+    ensureChatWs(chatId);
+  }, [chatId, auth.isAuthenticated, ensureChatWs]);
+
+  // ── 3. Marcar como leído (una vez por chatId) ──────────────
+  useEffect(() => {
+    if (!chatId || !auth.isAuthenticated || markedReadRef.current === chatId) return;
+    markedReadRef.current = chatId;
+
+    chatService.marcarComoLeido(chatId).catch(() => {});
+    dispatch(markChatRead(chatId));
+  }, [chatId, auth.isAuthenticated, dispatch]);
+
+  // ── Enviar mensaje ─────────────────────────────────────────
+  const enviarMensaje = useCallback(
+    (contenido: string) => {
+      if (!chatId) return;
+      sendMessage(chatId, contenido);
+    },
+    [chatId, sendMessage]
+  );
+
+  const isConnected = chatId ? isChatConnected(chatId) : false;
+
+  return {
+    mensajes,
+    isConnected,
+    isLoadingHistory,
+    enviarMensaje,
+  };
+};

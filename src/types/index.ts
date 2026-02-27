@@ -37,19 +37,38 @@ export interface UsuarioCreate {
   etiquetas: number[];
 }
 
-// Auth response from Google callback
+// Auth response from Google/backend endpoints
 export interface GoogleCallbackResponse {
-  resultado?: string;
-  id_google?: string;
-  email?: string;
+  // Para usuario existente
+  user?: {
+    id: number;
+    email: string;
+    google_id: string;
+    [key: string]: any;
+  };
   access_token?: string;
   token_type?: string;
+  refresh_token?: string;
+  user_id?: number;
+  
+  // Para usuario nuevo
+  is_new_user?: boolean;
+  google_id?: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+  
+  // Legacy/fallbacks
+  id_google?: string;
+  token_typeA?: string;
 }
 
 // Auth tokens stored locally
 export interface AuthTokens {
   accessToken: string;
   tokenType: string;
+  refreshToken?: string;
+  userId?: number;
 }
 
 // User profile
@@ -89,16 +108,24 @@ export interface FeedCard {
   distance?: number;
 }
 
+// Chat message
+export interface Mensaje {
+  id_mensaje: number;
+  id_emisor: number | string;
+  contenido: string;
+  fecha: string;
+  esLeido: boolean;
+}
+
 // Chat conversation preview
 export interface ChatPreview {
-  id: string;
-  userId: string;
-  name: string;
-  avatar: string;
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount: number;
-  therianType: TherianType;
+  id_chat: number;
+  id_usuario?: number; // ID del usuario actual
+  otro_usuario_id: number | string;
+  otro_usuario_nombre: string;
+  fecha_ultimo_mensaje: string;
+  ultimo_mensaje?: string;
+  esLeido?: boolean;
 }
 
 // Swipe actions
@@ -107,6 +134,21 @@ export type SwipeAction = "like" | "dislike" | "undo" | "report";
 export interface SwipePayload {
   targetUserId: string;
   action: SwipeAction;
+}
+
+// Like model (matches backend LikeM)
+export interface LikeM {
+  liker_id: number;
+  liked_id: number;
+  es_like: boolean; // true for like, false for dislike
+  created_at: string; // ISO datetime string
+}
+
+// Like response from backend
+export interface LikeResponse {
+  hubo_match: boolean;
+  id_match: number | null;
+  id_chat: number | null;
 }
 
 // API response wrapper

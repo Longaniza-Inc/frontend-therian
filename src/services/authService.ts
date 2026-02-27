@@ -4,32 +4,46 @@ import type { GoogleCallbackResponse } from "@/types";
 const AUTH_PREFIX = "/auth";
 
 export const authService = {
-  /** Get Google OAuth login URL */
-  async googleLogin(): Promise<string> {
-    console.log("📡 authService.googleLogin - Iniciando...");
+  /** POST /auth/google — Login directo con id_token de Google (Mobile + SPA) */
+  async googleAuth(idToken: string): Promise<GoogleCallbackResponse> {
+    console.log("📡 authService.googleAuth - Enviando id_token...");
     try {
-      const response = await api.get(`${AUTH_PREFIX}/google/login`);
-      console.log("📡 Response completo:", response);
-      console.log("📡 response.data:", response.data);
-      const url = response.data?.url;
-      console.log("📡 URL extraída:", url);
-      if (!url) {
-        throw new Error("No se recibió URL en la respuesta");
-      }
-      return url;
-    } catch (error) {
-      console.error("📡 Error en googleLogin:", error);
+      const response = await api.post<GoogleCallbackResponse>(`${AUTH_PREFIX}/google`, {
+        id_token: idToken,
+      });
+      console.log("✅ Google auth response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error en googleAuth:", error);
       throw error;
     }
   },
 
-  /** Handle Google OAuth callback */
-  async googleCallback(params: Record<string, string>): Promise<GoogleCallbackResponse> {
-    const response = await api.get<GoogleCallbackResponse>(`${AUTH_PREFIX}/google/callback`, { params });
-    return response.data;
+  /** GET /auth/google/login — Obtener URL de autorización de Google */
+  async googleLogin(): Promise<string> {
+    console.log("📡 authService.googleLogin - Iniciando...");
+    try {
+      const response = await api.get(`${AUTH_PREFIX}/google/login`);
+      console.log("📡 Response:", response.data);
+      const url = response.data?.url;
+      if (!url) {
+        throw new Error("No se recibió URL en la respuesta");
+      }
+      return url;
+    } catch (error: any) {
+      console.error("❌ Error en googleLogin:", error);
+      throw error;
+    }
   },
 
-  /** Register a new user with form data (multipart) */
+  /** GET /auth/google/callback — Manejado por backend, frontend solo espera localStorage */
+  async handleCallback(): Promise<void> {
+    // El backend inyecta authData en localStorage y redirige aquí
+    // No hay que hacer nada extra desde aquí
+    console.log("📡 handleCallback - Esperando datos en localStorage...");
+  },
+
+  /** POST /auth/registro — Registrar usuario nuevo */
   async register(userData: string, images: File[]): Promise<GoogleCallbackResponse> {
     const formData = new FormData();
     formData.append("usuario", userData);
@@ -41,36 +55,65 @@ export const authService = {
     return response.data;
   },
 
-  /** Get all etiquetas/tags */
-  async getEtiquetas(): Promise<any> {
+  /** GET /auth/me — Obtener usuario autenticado actual */
+  async getCurrentUser(): Promise<any> {
     try {
-      console.log("📡 Intentando cargar etiquetas de: /etiquetas/listar");
-      const response = await api.get("/etiquetas/listar", {
-        responseType: "json",
-        timeout: 5000,
-      });
-      console.log("✅ Respuesta de etiquetas completa:", response);
-      console.log("✅ Data:", response.data);
-      console.log("✅ Status:", response.status);
+      const response = await api.get(`${AUTH_PREFIX}/me`);
+      console.log("✅ User info:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("❌ Error en getEtiquetas:", {
-        mensaje: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        headers: error.response?.headers,
-        url: error.config?.url,
-        fullError: error
-      });
+      console.error("❌ Error al obtener usuario:", error);
       throw error;
     }
   },
 
-  /** Get all géneros */
+  /** POST /auth/refresh — Refrescar access_token */
+  async refreshToken(refreshToken: string): Promise<GoogleCallbackResponse> {
+    try {
+      const response = await api.post<GoogleCallbackResponse>(`${AUTH_PREFIX}/refresh`, {
+        refresh_token: refreshToken,
+      });
+      console.log("✅ Token refrescado");
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error al refrescar token:", error);
+      throw error;
+    }
+  },
+
+  /** POST /auth/logout — Cerrar sesión y revocar refresh_token */
+  async logout(refreshToken: string): Promise<any> {
+    try {
+      const response = await api.post(`${AUTH_PREFIX}/logout`, {
+        refresh_token: refreshToken,
+      });
+      console.log("✅ Sesión cerrada");
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error al cerrar sesión:", error);
+      throw error;
+    }
+  },
+
+  /** GET /etiquetas/listar — Obtener etiquetas */
+  async getEtiquetas(): Promise<any> {
+    try {
+      console.log("📡 Cargando etiquetas...");
+      const response = await api.get("/etiquetas/listar", {
+        responseType: "json",
+        timeout: 5000,
+      });
+      console.log("✅ Etiquetas cargadas:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error en getEtiquetas:", error);
+      throw error;
+    }
+  },
+
+  /** GET /usuario/genero — Obtener géneros */
   async getGeneros(): Promise<any> {
     try {
-      console.log("📡 Intentando cargar géneros de: /usuario/genero");
       const response = await api.get("/usuario/genero", {
         responseType: "json",
         timeout: 5000,
@@ -78,19 +121,14 @@ export const authService = {
       console.log("✅ Géneros cargados:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("❌ Error en getGeneros:", {
-        mensaje: error.message,
-        status: error.response?.status,
-        url: error.config?.url,
-      });
+      console.error("❌ Error en getGeneros:", error);
       throw error;
     }
   },
 
-  /** Get all provincias */
+  /** GET /usuario/provincias — Obtener provincias */
   async getProvincias(): Promise<any> {
     try {
-      console.log("📡 Intentando cargar provincias de: /usuario/provincias");
       const response = await api.get("/usuario/provincias", {
         responseType: "json",
         timeout: 5000,
@@ -98,19 +136,14 @@ export const authService = {
       console.log("✅ Provincias cargadas:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("❌ Error en getProvincias:", {
-        mensaje: error.message,
-        status: error.response?.status,
-        url: error.config?.url,
-      });
+      console.error("❌ Error en getProvincias:", error);
       throw error;
     }
   },
 
-  /** Get all tipo personas */
+  /** GET /usuario/tipo_personas — Obtener tipos de personas */
   async getTipoPersonas(): Promise<any> {
     try {
-      console.log("📡 Intentando cargar tipos de personas de: /usuario/tipo_personas");
       const response = await api.get("/usuario/tipo_personas", {
         responseType: "json",
         timeout: 5000,
@@ -118,11 +151,7 @@ export const authService = {
       console.log("✅ Tipos de personas cargados:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("❌ Error en getTipoPersonas:", {
-        mensaje: error.message,
-        status: error.response?.status,
-        url: error.config?.url,
-      });
+      console.error("❌ Error en getTipoPersonas:", error);
       throw error;
     }
   },
