@@ -10,6 +10,7 @@ const api: AxiosInstance = axios.create({
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "69420",  // ngrok requiere este header para requests desde navegador
   },
   withCredentials: true,  // Incluir cookies/credentials
 });
@@ -28,15 +29,19 @@ api.interceptors.request.use(
       tokenPreview: token ? token.substring(0, 20) + "..." : "NO TOKEN",
       params: config.params,
       data: config.data ? (typeof config.data === "string" ? JSON.parse(config.data) : config.data) : "none",
-      contentType: config.headers["Content-Type"]
     });
     
+    // Agregar token si existe
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log("✅ Token agregado al header Authorization");
     } else {
       console.warn("⚠️ NO HAY TOKEN EN REDUX - Request irá sin autenticación");
     }
+    
+    // Agregar header ngrok para requests desde navegador (bypass warning page)
+    config.headers["ngrok-skip-browser-warning"] = "69420";
+    
     return config;
   },
   (error) => {
