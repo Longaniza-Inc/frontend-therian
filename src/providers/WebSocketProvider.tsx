@@ -118,6 +118,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             return;
           }
           
+          // ✅ SYNC REQUIRED (cuando te reconectas, verifica si hay nuevos chats)
+          if (data.type === "sync_required") {
+            console.log("🔄 sync_required recibido - forzando reload de chats");
+            dispatch(invalidateChatList());
+            return;
+          }
+          
           // Actualización de chat existente
           if (data.type === "chat_update") {
             console.log("💬 Chat update recibido:", data);
