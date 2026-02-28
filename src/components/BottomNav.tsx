@@ -16,7 +16,7 @@ const BottomNav = () => {
   const isProfile = currentPath === "/profile";
 
   return (
-    <div className="gradient-header px-6 py-3 flex items-center justify-around">
+    <div className="fixed bottom-0 left-0 right-0 gradient-header px-6 py-3 flex items-center justify-around z-40 border-t border-border">
       <button
         onClick={() => navigate("/chat")}
         className="flex flex-col items-center transition-colors"

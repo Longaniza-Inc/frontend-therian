@@ -106,17 +106,22 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } catch { /* ignore bad frames */ }
       };
 
-      ws.onerror = () => {};
+      ws.onerror = (ev) => {
+        console.error("⚠️ WS-Provider: notificaciones error", ev);
+      };
 
       ws.onclose = (ev) => {
         console.log("🔌 WS-Provider: notificaciones cerrado", ev.code);
         if (notifWsRef.current === ws) notifWsRef.current = null;
         notifConnecting.current = false;
-        // Reconectar solo en cierres inesperados (no 1000=normal, no 1008=duplicado)
-        if (ev.code !== 1000 && ev.code !== 1008 && notifReconnect.current < MAX_RECONNECT) {
+        // Reconectar en: cierres anormales (1006), restart del servidor (1012), timeout (1011), etc.
+        // NO reconectar solo en: 1000 (normal), 1001 (going away), 1008 (policy violation)
+        const shouldReconnect = ![1000, 1001, 1008].includes(ev.code);
+        if (shouldReconnect && notifReconnect.current < MAX_RECONNECT) {
           notifReconnect.current++;
           notifConnecting.current = true;
           const delay = Math.pow(2, notifReconnect.current) * 1000;
+          console.log(`↻ WS-Provider: reconectando notificaciones en ${delay}ms (intento ${notifReconnect.current}/${MAX_RECONNECT})`);
           setTimeout(connect, delay);
         }
       };
@@ -174,13 +179,18 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } catch { /* ignore bad frames */ }
     };
 
-    ws.onerror = () => {};
+    ws.onerror = (ev) => {
+      console.error("⚠️ WS-Provider: chat", chatId, "error", ev);
+    };
 
     ws.onclose = (ev) => {
       console.log("🔌 WS-Provider: chat", chatId, "cerrado", ev.code);
       chatWsMap.current.delete(chatId);
-      // Reconectar solo en cierres inesperados (no 1000=normal, no 1008=duplicado)
-      if (auth.isAuthenticated && ev.code !== 1000 && ev.code !== 1008) {
+      // Reconectar en cierres anormales (1006=abnormal, 1012=service restart, etc.)
+      // NO reconectar en cierres normales (1000=ok, 1001=going away, 1008=policy)
+      const shouldReconnect = ![1000, 1001, 1008].includes(ev.code);
+      if (shouldReconnect && auth.isAuthenticated) {
+        console.log(`↻ WS-Provider: reconectando chat ${chatId} en 3s...`);
         setTimeout(() => ensureChatWs(chatId), 3000);
       }
     };

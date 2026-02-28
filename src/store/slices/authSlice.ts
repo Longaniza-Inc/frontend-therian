@@ -30,6 +30,8 @@ const loadAuthFromStorage = (): AuthState => {
       console.log("📦 Auth state recuperado de localStorage:", {
         isAuthenticated: parsed.isAuthenticated,
         has_tokens: !!parsed.tokens,
+        tokenLength: parsed.tokens?.accessToken?.length || 0,
+        tokenPreview: parsed.tokens?.accessToken ? parsed.tokens.accessToken.substring(0, 30) + "..." : "NO TOKEN",
         userId: parsed.userId,
         email: parsed.email,
       });
@@ -75,7 +77,13 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.error = null;
       saveAuthToStorage(state);
-      console.log("✅ Tokens guardados en localStorage");
+      console.log("✅ Tokens guardados en localStorage:", {
+        accessTokenLength: action.payload.accessToken.length,
+        accessTokenPreview: action.payload.accessToken.substring(0, 30) + "...",
+        tokenType: action.payload.tokenType,
+        hasRefreshToken: !!action.payload.refreshToken,
+        userId: action.payload.userId,
+      });
     },
     setGoogleInfo(state, action: PayloadAction<{ googleId: string; email: string; userId?: number }>) {
       state.googleId = action.payload.googleId;

@@ -59,8 +59,8 @@ const AuthCallback = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
 
         if (result.isNewUser) {
-          console.log("➡️ Redirigiendo a /profile (usuario nuevo)");
-          navigate("/profile", { replace: true });
+          console.log("➡️ Redirigiendo a /create-profile (usuario nuevo)");
+          navigate("/create-profile", { replace: true });
         } else {
           console.log("➡️ Redirigiendo a /feed (usuario existente)");
           navigate("/feed", { replace: true });

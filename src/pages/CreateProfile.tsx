@@ -189,8 +189,8 @@ const CreateProfile = () => {
       case 4: return provinciaSeleccionada !== null; // provincia required
       case 5: return tipoPersonaSeleccionado !== null; // tipo personas required
       case 6: return generoSeleccionado !== null; // género required
-      case 7: return true; // bio optional
-      case 8: return selectedInterests.length > 0;
+      case 7: return bio.trim().length >= 10; // ✅ Bio mínimo 10 caracteres
+      case 8: return selectedInterests.length > 0; // ✅ Al menos 1 etiqueta
       default: return false;
     }
   };
@@ -199,6 +199,17 @@ const CreateProfile = () => {
     if (step < TOTAL_STEPS - 1) {
       setStep(step + 1);
     } else {
+      // ✅ VALIDACIONES REQUERIDAS antes de registrar
+      if (!bio || bio.trim().length < 10) {
+        alert("La descripción 'Sobre ti' debe tener al menos 10 caracteres");
+        return;
+      }
+
+      if (selectedInterests.length === 0) {
+        alert("Debes seleccionar al menos 1 etiqueta de intereses");
+        return;
+      }
+
       // Finish — submit profile
       try {
         // Get etiqueta IDs from selected names
@@ -630,7 +641,12 @@ const CreateProfile = () => {
                 <textarea placeholder="Cuéntanos sobre ti..." value={bio} onChange={(e) => setBio(e.target.value)} maxLength={225} rows={5}
                   className="w-full rounded-2xl border border-input bg-secondary/50 py-4 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none" />
               </div>
-              <p className="text-right text-xs text-muted-foreground mt-1">{bio.length}/225</p>
+              <div className="flex justify-between items-center mt-2">
+                <p className="text-right text-xs text-muted-foreground">{bio.length}/225</p>
+                {bio.trim().length < 10 && (
+                  <p className="text-xs text-destructive font-semibold">⚠️ Mínimo 10 caracteres</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -653,9 +669,13 @@ const CreateProfile = () => {
                       );
                     })}
                   </div>
-                  {selectedInterests.length > 0 && (
-                    <p className="text-center text-sm text-muted-foreground mt-4">{selectedInterests.length} seleccionados</p>
-                  )}
+                  <div className="mt-4 text-center">
+                    {selectedInterests.length > 0 ? (
+                      <p className="text-sm text-primary font-semibold">✅ {selectedInterests.length} seleccionado{selectedInterests.length > 1 ? 's' : ''}</p>
+                    ) : (
+                      <p className="text-sm text-destructive font-semibold">⚠️ Debes seleccionar al menos 1 interés</p>
+                    )}
+                  </div>
                 </>
               )}
             </div>

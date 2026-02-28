@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "./useAppDispatch";
 import { setLoading, setTokens, setGoogleInfo, setError, logout as logoutAction } from "@/store/slices/authSlice";
 import { authService } from "@/services/authService";
+import { decodeJWT } from "@/lib/jwt";
 
 export function useAuth() {
   const dispatch = useAppDispatch();
@@ -14,19 +15,35 @@ export function useAuth() {
       dispatch(setLoading(true));
       const response = await authService.googleAuth(idToken);
 
+      console.log("📋 Respuesta del backend (googleAuth):", {
+        user_id: response.user_id,
+        google_id: response.user?.google_id || response.google_id,
+        email: response.email,
+        access_token: !!response.access_token,
+      });
+
       if (response.access_token) {
         // Usuario existente - devuelve tokens completos
         console.log("✅ Usuario existente, guardando tokens...");
+        
+        // Decodificar JWT para verificar expiración
+        console.log("🔍 Decodificando JWT recibido...");
+        decodeJWT(response.access_token);
+        
+        // IMPORTANTE: Usar user_id de la BD, NO google_id
+        const userId = response.user?.id || response.user_id;
+        console.log("🆔 Usando user_id:", userId);
+        
         dispatch(setTokens({
           accessToken: response.access_token,
           tokenType: response.token_type || "bearer",
           refreshToken: response.refresh_token,
-          userId: response.user?.id || response.user_id,
+          userId: userId,
         }));
         dispatch(setGoogleInfo({
           googleId: response.user?.google_id || response.google_id || "",
           email: response.user?.email || response.email || "",
-          userId: response.user?.id || response.user_id,
+          userId: userId,
         }));
         return { isNewUser: false, response };
       } else if (response.is_new_user) {
@@ -86,22 +103,33 @@ export function useAuth() {
       console.log("✅ Datos de callback parseados:", {
         is_new_user: response.is_new_user,
         email: response.email,
+        user_id: response.user_id,
+        google_id: response.google_id,
         has_token: !!response.access_token,
       });
 
       if (response.access_token) {
         // Usuario existente
         console.log("✅ Usuario existente + tokens");
+        
+        // Decodificar JWT para verificar expiración
+        console.log("🔍 Decodificando JWT recibido en callback...");
+        decodeJWT(response.access_token);
+        
+        // IMPORTANTE: Usar user_id de la BD, NO google_id
+        const userId = response.user_id;
+        console.log("🆔 Usando user_id:", userId);
+        
         dispatch(setTokens({
           accessToken: response.access_token,
           tokenType: response.token_type || "bearer",
           refreshToken: response.refresh_token,
-          userId: response.user_id,
+          userId: userId,
         }));
         dispatch(setGoogleInfo({
           googleId: response.google_id,
           email: response.email,
-          userId: response.user_id,
+          userId: userId,
         }));
         return { isNewUser: false, response };
       } else if (response.is_new_user) {
@@ -131,17 +159,28 @@ export function useAuth() {
       dispatch(setLoading(true));
       const response = await authService.register(userData, images);
       
+      console.log("📋 Respuesta del backend (register):", {
+        user_id: response.user?.id,
+        google_id: response.user?.google_id,
+        email: response.user?.email,
+        has_token: !!response.access_token,
+      });
+      
       if (response.access_token) {
+        // IMPORTANTE: Usar user_id de la BD, NO google_id
+        const userId = response.user?.id;
+        console.log("🆔 Usando user_id:", userId);
+        
         dispatch(setTokens({
           accessToken: response.access_token,
           tokenType: response.token_type || "bearer",
           refreshToken: response.refresh_token,
-          userId: response.user?.id,
+          userId: userId,
         }));
         dispatch(setGoogleInfo({
           googleId: response.user?.google_id || "",
           email: response.user?.email || "",
-          userId: response.user?.id,
+          userId: userId,
         }));
       }
       return response;

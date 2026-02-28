@@ -90,6 +90,32 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+// Profile data from backend (GET /usuario/perfil/obtener)
+export interface ProfileData {
+  id: number;
+  user_name: string;
+  bio: string;
+  email?: string;
+  genero?: string;
+  tipo_de_therian?: string;
+  fechaNacimiento?: string;
+  provincia?: string;
+  imagenes?: string[];
+  etiqueta?: string[];
+  [key: string]: any; // backend puede devolver campos extra
+}
+
+// Profile update payload (POST /usuario/perfil/cambiar)
+export interface ProfileUpdateData {
+  id: number;
+  nombre?: string;
+  user_name?: string;
+  bio?: string;
+  tipoPersona_id?: number;
+  provincia_id?: number;
+  etiquetas?: number[];
+}
+
 // Description section for each photo slide
 export interface DescriptionSection {
   title: string;

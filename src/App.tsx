@@ -7,20 +7,24 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { store } from "@/store";
 import { WebSocketProvider } from "@/providers/WebSocketProvider";
 import { useChats } from "@/hooks/useChats";
+import { useProfileLoader } from "@/hooks/useProfileLoader";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
 import CreateProfile from "./pages/CreateProfile";
+import Profile from "./pages/Profile";
 import Feed from "./pages/Feed";
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-/** Componente interno: carga inicial de chats + rutas */
+/** Componente interno: carga inicial de chats + perfil + rutas */
 const AppContent = () => {
   // Carga lista de chats una vez → Redux
   useChats();
+  // Carga perfil del usuario al autenticarse (se cachea en Redux)
+  useProfileLoader();
 
   return (
     <TooltipProvider>
@@ -32,7 +36,8 @@ const AppContent = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/profile" element={<CreateProfile />} />
+          <Route path="/create-profile" element={<CreateProfile />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="*" element={<NotFound />} />

@@ -20,16 +20,25 @@ const api: AxiosInstance = axios.create({
 // Request interceptor — attach auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    const state = store.getState();
+    const token = state.auth.tokens?.accessToken;
+    
     console.log("🔵 Request interceptor:", {
       method: config.method?.toUpperCase(),
       url: config.url,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      tokenPreview: token ? token.substring(0, 20) + "..." : "NO TOKEN",
       params: config.params,
-      data: config.data ? "present" : "none"
+      data: config.data ? (typeof config.data === "string" ? JSON.parse(config.data) : config.data) : "none",
+      contentType: config.headers["Content-Type"]
     });
-    const state = store.getState();
-    const token = state.auth.tokens?.accessToken;
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log("✅ Token agregado al header Authorization");
+    } else {
+      console.warn("⚠️ NO HAY TOKEN EN REDUX - Request irá sin autenticación");
     }
     return config;
   },

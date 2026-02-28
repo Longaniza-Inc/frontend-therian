@@ -67,7 +67,10 @@ export const useChat = (chatId: number | null) => {
     if (!chatId || !auth.isAuthenticated || markedReadRef.current === chatId) return;
     markedReadRef.current = chatId;
 
-    chatService.marcarComoLeido(chatId).catch(() => {});
+    // Silenciar errores — no es crítico
+    chatService.marcarComoLeido(chatId).catch((err) => {
+      console.warn("⚠️ No se pudo marcar como leído", chatId, err?.message);
+    });
     dispatch(markChatRead(chatId));
   }, [chatId, auth.isAuthenticated, dispatch]);
 

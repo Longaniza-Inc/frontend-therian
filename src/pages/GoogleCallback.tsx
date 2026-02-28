@@ -31,7 +31,7 @@ const GoogleCallback = () => {
         if (auth.googleId && auth.email && !auth.tokens) {
           // Usuario nuevo - ir a crear perfil
           console.log("✅ Usuario nuevo - googleId:", auth.googleId);
-          navigate("/profile", { replace: true });
+          navigate("/create-profile", { replace: true });
         } else if (auth.tokens) {
           // Usuario existente - ir al feed
           console.log("✅ Usuario existente con token");
