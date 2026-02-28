@@ -10,6 +10,9 @@ import {
   invalidateChatList,
 } from "@/store/slices/chatSlice";
 
+// Backend URL para WebSockets — configurable mediante VITE_BACKEND_URL
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+
 /* ═══════════════════════════════════════
    CONTEXT TYPES
    ═══════════════════════════════════════ */
@@ -51,8 +54,11 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   /* ── HELPERS ────────────────────────────────────────────── */
 
   const buildWsUrl = useCallback((path: string, token: string) => {
-    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
+    // Convertir HTTPS a WSS, HTTP a WS
+    const proto = BACKEND_URL.startsWith("https") ? "wss:" : "ws:";
+    // Extraer host de la URL (sin protocolo)
+    const url = new URL(BACKEND_URL);
+    const host = url.hostname + (url.port ? `:${url.port}` : "");
     return `${proto}//${host}${path}?token=${encodeURIComponent(token)}`;
   }, []);
 

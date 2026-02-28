@@ -1,12 +1,9 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { store } from "@/store";
 
-// API Base URL — apuntar directamente al backend
-// En desarrollo: backend corre en puerto 8000
-// En producción: usar variable de entorno o mismo host que frontend
-const API_BASE_URL = import.meta.env.PROD 
-  ? (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000")
-  : "http://127.0.0.1:8000";  // En dev, apuntar directamente al backend en puerto 8000
+// API Base URL — configurable mediante variable de entorno VITE_BACKEND_URL
+// Ver archivo .env para cambiar la URL según el entorno
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
