@@ -24,6 +24,8 @@ interface ChatState {
   activeChatIds: number[];
   /** Contadores de no leídos */
   unreadCounts: Record<number, number>;
+  /** Flag para indicar que la lista debe recargarse (nuevo chat, match, etc.) */
+  shouldRefreshList: boolean;
 }
 
 const initialState: ChatState = {
@@ -32,6 +34,7 @@ const initialState: ChatState = {
   historyRequested: {},
   activeChatIds: [],
   unreadCounts: {},
+  shouldRefreshList: false,
 };
 
 /* ═══════════════════════════════════════
@@ -123,6 +126,17 @@ const chatSlice = createSlice({
       state.historyRequested = {};
       state.activeChatIds = [];
       state.unreadCounts = {};
+      state.shouldRefreshList = false;
+    },
+
+    /** Marcar que la lista debe recargarse (nuevo chat, match, etc.) */
+    invalidateChatList(state) {
+      state.shouldRefreshList = true;
+    },
+
+    /** Resetear el flag de refresh después de recargar */
+    resetRefreshFlag(state) {
+      state.shouldRefreshList = false;
     },
   },
 });
@@ -137,6 +151,8 @@ export const {
   incrementUnread,
   addActiveChatId,
   clearChats,
+  invalidateChatList,
+  resetRefreshFlag,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

@@ -7,6 +7,7 @@ import {
   updateChatPreview,
   clearChats,
   addActiveChatId,
+  invalidateChatList,
 } from "@/store/slices/chatSlice";
 
 /* ═══════════════════════════════════════
@@ -90,10 +91,21 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ws.onmessage = (ev) => {
         try {
           const data = JSON.parse(ev.data);
+          console.log("📨 WS-Notificaciones recibió:", { type: data.type, ...data });
+          
           if (data.type === "ping") {
             ws.send(JSON.stringify({ type: "pong" }));
             return;
           }
+          
+          // ✅ NUEVO CHAT (cuando hay un match)
+          if (data.type === "new_chat") {
+            console.log("🎉 Nuevo chat recibido via WS - disparando recarga de chats:", data);
+            dispatch(invalidateChatList());
+            return;
+          }
+          
+          // Actualización de chat existente
           if (data.type === "chat_update") {
             dispatch(updateChatPreview({
               chat_id: data.chat_id,
@@ -103,7 +115,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               unread_count: data.unread_count,
             }));
           }
-        } catch { /* ignore bad frames */ }
+        } catch (err) {
+          console.error("❌ Error parseando mensaje WS notificaciones:", err);
+        }
       };
 
       ws.onerror = (ev) => {
