@@ -90,23 +90,37 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       ws.onmessage = (ev) => {
         try {
+          console.log("📨 WS-Notificaciones mensaje RAW:", ev.data);
           const data = JSON.parse(ev.data);
-          console.log("📨 WS-Notificaciones recibió:", { type: data.type, ...data });
+          console.log("📨 WS-Notificaciones parseado:", { 
+            type: data.type, 
+            keys: Object.keys(data),
+            fullData: data 
+          });
           
           if (data.type === "ping") {
+            console.log("🏓 Respondiendo ping");
             ws.send(JSON.stringify({ type: "pong" }));
             return;
           }
           
           // ✅ NUEVO CHAT (cuando hay un match)
           if (data.type === "new_chat") {
-            console.log("🎉 Nuevo chat recibido via WS - disparando recarga de chats:", data);
+            console.log("🎉 ¡NUEVO CHAT DETECTADO! Disparando invalidateChatList...", data);
+            dispatch(invalidateChatList());
+            return;
+          }
+          
+          // 🔄 REFRESH CHATS (instrucción explícita del backend para recargar)
+          if (data.type === "refresh_chats") {
+            console.log("🔄 Refresh chats recibido del backend - revalidando lista");
             dispatch(invalidateChatList());
             return;
           }
           
           // Actualización de chat existente
           if (data.type === "chat_update") {
+            console.log("💬 Chat update recibido:", data);
             dispatch(updateChatPreview({
               chat_id: data.chat_id,
               ultimo_mensaje: data.ultimo_mensaje,
@@ -115,8 +129,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               unread_count: data.unread_count,
             }));
           }
+          
+          // Fallback: detectar si tiene estructura de nuevo chat aunque no tenga type
+          if (data.id_chat && !data.type) {
+            console.warn("⚠️ Mensaje sin type pero con estructura de chat, procesando...");
+            dispatch(invalidateChatList());
+          }
         } catch (err) {
-          console.error("❌ Error parseando mensaje WS notificaciones:", err);
+          console.error("❌ Error parseando mensaje WS notificaciones:", err, "Raw:", ev.data);
         }
       };
 

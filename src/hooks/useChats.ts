@@ -21,6 +21,17 @@ export const useChats = () => {
   const dispatch = useAppDispatch();
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  // LOG el estado de shouldRefresh
+  useEffect(() => {
+    console.log("🔍 useChats estado:", {
+      authenticated: auth.isAuthenticated,
+      userId: auth.userId,
+      hasLoaded,
+      shouldRefresh,
+      chatListCount: chatList.length,
+    });
+  }, [auth.isAuthenticated, auth.userId, hasLoaded, shouldRefresh, chatList.length]);
+
   useEffect(() => {
     if (!auth.userId || !auth.isAuthenticated) return;
     
@@ -31,7 +42,7 @@ export const useChats = () => {
     const cargar = async () => {
       try {
         setIsLoading(true);
-        console.log("📝 useChats: cargando chats... (refresh:", shouldRefresh, ")");
+        console.log("📝 useChats: cargando chats... (refresh:", shouldRefresh, ", hasLoaded:", hasLoaded, ")");
         
         // 1. Cargar lista de chats
         const data = await chatService.obtenerChats();
@@ -64,6 +75,7 @@ export const useChats = () => {
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error al cargar chats");
+        console.error("❌ useChats error:", err);
       } finally {
         setIsLoading(false);
       }
