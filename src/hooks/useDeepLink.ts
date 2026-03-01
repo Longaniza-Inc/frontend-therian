@@ -23,9 +23,16 @@ export function useDeepLink() {
       console.log("🔗 Deep link recibido:", event.url);
 
       try {
-        const url = new URL(event.url);
-        const pathname = url.pathname;
-        const search = url.search;
+        // El deeplink viene como: pawtalk://auth/callback?authData=...
+        // Extraer la parte después de pawtalk://
+        const urlString = event.url.replace("pawtalk://", "");
+        const [pathname, search] = urlString.includes("?") 
+          ? urlString.split("?") 
+          : [urlString, ""];
+        const fullPathname = `/${pathname}`;
+        const searchStr = search ? `?${search}` : "";
+
+        console.log("📍 Ruta parseada:", fullPathname, searchStr);
 
         // Parsear el deep link según el patrón
         // pawtalk://auth/callback?... → /auth/callback?...
@@ -33,21 +40,22 @@ export function useDeepLink() {
         // pawtalk://new-match → /
         // pawtalk://notification?type=message&chatId=456 → /chat/456
 
-        if (pathname === "/auth/callback") {
-          navigate(`${pathname}${search}`);
+        if (fullPathname === "/auth/callback") {
+          navigate(`${fullPathname}${searchStr}`);
           console.log("✅ Navegando a auth callback");
-        } else if (pathname === "/chat" || pathname.startsWith("/chat/")) {
+        } else if (fullPathname === "/chat" || fullPathname.startsWith("/chat/")) {
           // Extraer chat ID si existe: /chat/123
-          navigate(`${pathname}${search}`);
-          console.log("✅ Navegando a chat:", pathname);
-        } else if (pathname === "/new-match") {
+          navigate(`${fullPathname}${searchStr}`);
+          console.log("✅ Navegando a chat:", fullPathname);
+        } else if (fullPathname === "/new-match") {
           // Nuevo match → navegar al feed
           navigate("/");
           console.log("✅ Navegando a feed (nuevo match disponible)");
-        } else if (pathname === "/notification") {
+        } else if (fullPathname === "/notification") {
           // Manejar notificaciones genéricas
-          const type = url.searchParams.get("type");
-          const chatId = url.searchParams.get("chatId");
+          const urlParams = new URLSearchParams(searchStr);
+          const type = urlParams.get("type");
+          const chatId = urlParams.get("chatId");
 
           if (type === "message" && chatId) {
             navigate(`/chat/${chatId}`);
@@ -56,10 +64,10 @@ export function useDeepLink() {
             navigate("/");
             console.log("✅ Navegando a feed desde notificación de match");
           }
-        } else if (pathname) {
+        } else if (fullPathname) {
           // Fallback: navegar a la ruta como está
-          navigate(`${pathname}${search}`);
-          console.log("✅ Navegando a ruta genérica:", pathname);
+          navigate(`${fullPathname}${searchStr}`);
+          console.log("✅ Navegando a ruta genérica:", fullPathname);
         }
       } catch (error) {
         console.error("❌ Error procesando deep link:", error);

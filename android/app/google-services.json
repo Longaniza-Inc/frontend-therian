@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "547980939081",
+    "project_id": "thalk-10f27",
+    "storage_bucket": "thalk-10f27.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:547980939081:android:59f1a43cb79c3421fe1498",
+        "android_client_info": {
+          "package_name": "com.longanizainc.pawtalk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC95Iyrp8jAZBr2UrpVDRnhEzBQKBrAaOk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

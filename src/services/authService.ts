@@ -5,12 +5,13 @@ const AUTH_PREFIX = "/auth";
 
 export const authService = {
   /** POST /auth/google — Login directo con id_token de Google (Mobile + SPA) */
-  async googleAuth(idToken: string): Promise<GoogleCallbackResponse> {
+  async googleAuth(idToken: string, fcmToken?: string): Promise<GoogleCallbackResponse> {
     console.log("📡 authService.googleAuth - Enviando id_token...");
     try {
-      const response = await api.post<GoogleCallbackResponse>(`${AUTH_PREFIX}/google`, {
-        id_token: idToken,
-      });
+      const body: Record<string, string> = { id_token: idToken };
+      if (fcmToken) body.fcm_token = fcmToken;
+
+      const response = await api.post<GoogleCallbackResponse>(`${AUTH_PREFIX}/google`, body);
       console.log("✅ Google auth response:", response.data);
       return response.data;
     } catch (error: any) {
@@ -84,16 +85,32 @@ export const authService = {
   },
 
   /** POST /auth/logout — Cerrar sesión y revocar refresh_token */
-  async logout(refreshToken: string): Promise<any> {
+  async logout(refreshToken: string, fcmToken?: string): Promise<any> {
     try {
-      const response = await api.post(`${AUTH_PREFIX}/logout`, {
-        refresh_token: refreshToken,
-      });
+      const body: Record<string, string> = { refresh_token: refreshToken };
+      if (fcmToken) body.fcm_token = fcmToken;
+
+      const response = await api.post(`${AUTH_PREFIX}/logout`, body);
       console.log("✅ Sesión cerrada");
       return response.data;
     } catch (error: any) {
       console.error("❌ Error al cerrar sesión:", error);
       throw error;
+    }
+  },
+
+  /** POST /auth/fcm-token — Registrar o actualizar token FCM */
+  async updateFCMToken(fcmToken: string, oldFcmToken?: string): Promise<any> {
+    try {
+      const body: Record<string, string> = { fcm_token: fcmToken };
+      if (oldFcmToken) body.old_fcm_token = oldFcmToken;
+
+      const response = await api.post(`${AUTH_PREFIX}/fcm-token`, body);
+      console.log("✅ FCM token registrado en backend");
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error al registrar FCM token:", error);
+      // No relanzar — el fallo de FCM no debe bloquear el flujo
     }
   },
 

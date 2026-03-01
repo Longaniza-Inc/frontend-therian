@@ -9,6 +9,10 @@ import { clearFeed } from "@/store/slices/feedSlice";
 // Ver archivo .env para cambiar la URL según el entorno
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
 
+console.log("🔧 API Configuration: VITE_BACKEND_URL=" + import.meta.env.VITE_BACKEND_URL);
+console.log("🔧 API Configuration: API_BASE_URL=" + API_BASE_URL);
+console.log("🔧 API Configuration: MODE=" + import.meta.env.MODE + ", PROD=" + import.meta.env.PROD);
+
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,

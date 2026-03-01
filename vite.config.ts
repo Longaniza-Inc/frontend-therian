@@ -6,8 +6,8 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   appType: 'spa',
-  // Base relativa para que Capacitor pueda cargar los assets desde el filesystem
-  base: mode === 'production' ? './' : '/',
+  // Base relativa SIEMPRE — necesario para que Capacitor cargue assets desde el APK
+  base: './',
   server: {
     host: "localhost",
     port: 8080,

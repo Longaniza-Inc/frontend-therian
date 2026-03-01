@@ -7,17 +7,69 @@ import { clearChats } from "@/store/slices/chatSlice";
 import { clearFeed } from "@/store/slices/feedSlice";
 import { authService } from "@/services/authService";
 import { decodeJWT } from "@/lib/jwt";
+import {
+  requestNotificationPermission,
+  getFCMToken,
+  getCachedFCMToken,
+  setupPushListeners,
+  removePushListeners,
+} from "@/services/pushNotificationService";
 
 export function useAuth() {
   const dispatch = useAppDispatch();
   const auth = useAppSelector((state) => state.auth);
+
+  /**
+   * Inicializa push notifications tras un login/registro exitoso.
+   * Pide permisos, obtiene token FCM, lo envía al backend y configura listeners.
+   */
+  const initPushAfterAuth = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        console.log("⚠️ Permisos de notificación no concedidos");
+        return;
+      }
+
+      const fcmToken = await getFCMToken();
+      if (fcmToken) {
+        // Registrar token en backend (por si no se envió en el login)
+        await authService.updateFCMToken(fcmToken);
+      }
+
+      // Configurar listeners para foreground notifications
+      setupPushListeners({
+        onNotificationReceived: (notification) => {
+          console.log("📬 Notificación foreground:", notification);
+        },
+        onNotificationClicked: (notification) => {
+          console.log("👆 Click en notificación:", notification);
+          // Deep links se manejan en useDeepLink via App plugin
+        },
+        // Nota: El token refresh es manejado internamente por Firebase en Android.
+        // Si se necesita sincronizar una nueva token, usar authService.updateFCMToken()
+      });
+    } catch (error) {
+      console.error("⚠️ Error inicializando push:", error);
+    }
+  }, []);
 
   /** Login directo con id_token de Google (para Google SDK) */
   const googleAuth = useCallback(async (idToken: string) => {
     try {
       console.log("🔐 googleAuth - Enviando id_token...");
       dispatch(setLoading(true));
-      const response = await authService.googleAuth(idToken);
+
+      // Obtener FCM token antes del login para enviarlo junto con la auth
+      let fcmToken: string | null = null;
+      if (Capacitor.isNativePlatform()) {
+        const granted = await requestNotificationPermission();
+        if (granted) fcmToken = await getFCMToken();
+      }
+
+      const response = await authService.googleAuth(idToken, fcmToken ?? undefined);
 
       console.log("📋 Respuesta del backend (googleAuth):", {
         user_id: response.user_id,
@@ -49,6 +101,8 @@ export function useAuth() {
           email: response.user?.email || response.email || "",
           userId: userId,
         }));
+        // Inicializar push notifications (listeners + token refresh)
+        initPushAfterAuth();
         return { isNewUser: false, response };
       } else if (response.is_new_user) {
         // Usuario nuevo - solo datos básicos
@@ -140,6 +194,8 @@ export function useAuth() {
           email: response.email,
           userId: userId,
         }));
+        // Inicializar push notifications (listeners + token refresh)
+        initPushAfterAuth();
         return { isNewUser: false, response };
       } else if (response.is_new_user) {
         // Usuario nuevo
@@ -192,6 +248,8 @@ export function useAuth() {
           userId: userId,
         }));
       }
+      // Inicializar push notifications tras registro
+      initPushAfterAuth();
       return response;
     } catch (err: any) {
       dispatch(setError(err.message || "Error al registrarse"));
@@ -206,9 +264,15 @@ export function useAuth() {
       dispatch(setLoading(true));
       const refreshToken = auth.tokens?.refreshToken;
       
+      // Obtener FCM token cacheado para desactivarlo en backend
+      const fcmToken = getCachedFCMToken();
+      
       if (refreshToken) {
-        await authService.logout(refreshToken);
+        await authService.logout(refreshToken, fcmToken ?? undefined);
       }
+      
+      // Limpiar listeners de push notifications
+      await removePushListeners();
       
       dispatch(clearProfile());
       dispatch(clearChats());
@@ -216,6 +280,7 @@ export function useAuth() {
       dispatch(logoutAction());
     } catch (err: any) {
       console.error("Error al logout:", err);
+      await removePushListeners();
       dispatch(clearProfile());
       dispatch(clearChats());
       dispatch(clearFeed());
@@ -232,5 +297,6 @@ export function useAuth() {
     handleGoogleCallback,
     registerUser,
     logout,
+    initPushAfterAuth,
   };
 }

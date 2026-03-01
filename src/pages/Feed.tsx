@@ -188,8 +188,8 @@ const Feed = () => {
 
   // Filter state
   const [filters, setFilters] = useState({
-    edadMin: 18,
-    edadMax: 100,
+    edadMin: 16,
+    edadMax: 80,
     provincia: "",
     tipo_persona: "",
     genero: ""
@@ -247,8 +247,8 @@ const Feed = () => {
         filters.provincia !== "" || 
         filters.tipo_persona !== "" || 
         filters.genero !== "" ||
-        filters.edadMin !== 18 ||
-        filters.edadMax !== 100;
+        filters.edadMin !== 16 ||
+        filters.edadMax !== 80;
 
       let response;
       if (hasActiveFilters) {
@@ -789,8 +789,8 @@ const Feed = () => {
                     <label className="text-xs text-muted-foreground">Edad mínima</label>
                     <input
                       type="range"
-                      min="18"
-                      max="100"
+                      min="16"
+                      max="80"
                       value={filters.edadMin}
                       onChange={(e) => setFilters({
                         ...filters,
@@ -803,8 +803,8 @@ const Feed = () => {
                     <label className="text-xs text-muted-foreground">Edad máxima</label>
                     <input
                       type="range"
-                      min="18"
-                      max="100"
+                      min="16"
+                      max="80"
                       value={filters.edadMax}
                       onChange={(e) => setFilters({
                         ...filters,
@@ -876,8 +876,8 @@ const Feed = () => {
                 <button
                   onClick={() => {
                     setFilters({
-                      edadMin: 18,
-                      edadMax: 100,
+                      edadMin: 16,
+                      edadMax: 80,
                       provincia: "",
                       tipo_persona: "",
                       genero: ""
