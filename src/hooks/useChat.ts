@@ -1,11 +1,14 @@
 import { useEffect, useRef, useCallback, useMemo } from "react";
 import { chatService } from "@/services/chatService";
+import type { MensajeImagen } from "@/services/chatService";
 import { useAppSelector, useAppDispatch } from "./useAppDispatch";
 import { useWebSocket } from "@/providers/WebSocketProvider";
+import type { WsOutgoingMessage } from "@/providers/WebSocketProvider";
 import {
   setMessagesForChat,
   markHistoryRequested,
   markChatRead,
+  deleteMessage,
 } from "@/store/slices/chatSlice";
 
 /**
@@ -32,7 +35,7 @@ export const useChat = (chatId: number | null) => {
   );
   const isLoadingHistory = historyRequested && !hasMessages;
   const dispatch = useAppDispatch();
-  const { ensureChatWs, sendMessage, isChatConnected } = useWebSocket();
+  const { ensureChatWs, sendMessage, sendWsMessage, isChatConnected } = useWebSocket();
 
   const markedReadRef = useRef<number | null>(null);
 
@@ -83,12 +86,58 @@ export const useChat = (chatId: number | null) => {
     [chatId, sendMessage]
   );
 
+  // ── Enviar mensaje con reply ─────────────────────────────
+  const enviarMensajeConReply = useCallback(
+    (contenido: string, replyToId: number | string) => {
+      if (!chatId) return;
+      sendWsMessage(chatId, {
+        contenido,
+        tipo: "mensaje",
+        id_mensaje_reply: replyToId,
+      });
+    },
+    [chatId, sendWsMessage]
+  );
+
+  // ── Enviar imagen ─────────────────────────────────────────
+  const enviarImagen = useCallback(
+    (imagenes: MensajeImagen[], replyToId?: number | string | null) => {
+      if (!chatId) return;
+      const payload: WsOutgoingMessage = {
+        tipo: "imagen",
+        imagenes,
+      };
+      if (replyToId) payload.id_mensaje_reply = replyToId;
+      sendWsMessage(chatId, payload);
+    },
+    [chatId, sendWsMessage]
+  );
+
   const isConnected = chatId ? isChatConnected(chatId) : false;
+
+  // ── Eliminar mensaje ────────────────────────────────────────
+  const eliminarMensaje = useCallback(
+    async (mensajeId: number | string) => {
+      if (!chatId) return;
+      try {
+        // Optimista: actualizar Redux antes de la respuesta
+        dispatch(deleteMessage({ chatId, mensajeId }));
+        // Llamada REST (el backend también hace broadcast WS, pero ya lo marcamos)
+        await chatService.eliminarMensaje(mensajeId);
+      } catch (err) {
+        console.error("❌ Error al eliminar mensaje:", err);
+      }
+    },
+    [chatId, dispatch]
+  );
 
   return {
     mensajes,
     isConnected,
     isLoadingHistory,
     enviarMensaje,
+    enviarMensajeConReply,
+    enviarImagen,
+    eliminarMensaje,
   };
 };

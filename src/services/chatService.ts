@@ -1,13 +1,31 @@
 import api from "./api";
 
+export interface MensajeImagen {
+  url: string;
+  delete_url?: string;
+}
+
+export interface MensajeReply {
+  id_mensaje: number | string;
+  id_emisor: number | string;
+  contenido: string | null;
+  tipo?: "mensaje" | "imagen";
+}
+
 export interface Mensaje {
   id_mensaje?: number | string;  // ID real (int) o temporal (UUID)
   type?: string;                 // "new_message" cuando viene por WS
   chat_id?: number;
   id_emisor: number | string;
-  contenido: string;
+  contenido: string | null;
   fecha: string;
   esLeido?: boolean;
+  tipo?: "mensaje" | "imagen";   // tipo de mensaje
+  id_mensaje_reply?: number | string | null; // ID del mensaje al que responde
+  mensaje_reply?: MensajeReply | null;       // datos completos del mensaje original (desde historial REST)
+  imagenes?: MensajeImagen[];    // imágenes adjuntas (solo tipo=imagen)
+  eliminado?: boolean;           // mensaje eliminado (soft delete)
+  tiempo_restante_segundos?: number | null;  // segundos restantes para poder eliminarlo (<=0 = expirado)
 }
 
 export interface ChatPreview {
@@ -16,7 +34,11 @@ export interface ChatPreview {
   otro_usuario_nombre: string;
   fecha_ultimo_mensaje: string | null;
   ultimo_mensaje?: string;
-  unread_count?: number;
+  contenido_mensaje?: string | null;  // último mensaje desde backend
+  tipo_mensaje?: string | null;        // tipo del último mensaje
+  mensajes_sin_leer?: number;          // contador de no leídos desde backend
+  unread_count?: number;               // unread desde Redis
+  imagen_url?: string | null;  // foto de perfil del otro usuario
 }
 
 const CHAT_PREFIX = "/chat";
@@ -86,38 +108,24 @@ export const chatService = {
   },
 
   /**
-   * Crear WebSocket para un chat específico
-   * Se abre al entrar al chat y se cierra al salir
+   * Eliminar mensaje (soft delete) — DELETE /chat/mensaje/{mensajeId}
    */
-  conectarWebSocketChat(chatId: number, token: string): WebSocket {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsHost = window.location.host;
-    const wsUrl = `${protocol}//${wsHost}/chat/ws/${chatId}?token=${encodeURIComponent(token)}`;
-    console.log("🔌 chatService.conectarWebSocketChat:", { chatId, url: wsUrl.split("?")[0] });
-    return new WebSocket(wsUrl);
+  async eliminarMensaje(mensajeId: number | string): Promise<{ id_mensaje: number; chat_id: number }> {
+    const response = await api.delete(`${CHAT_PREFIX}/mensaje/${mensajeId}`);
+    return response.data;
   },
 
   /**
-   * Crear WebSocket global de notificaciones
-   * Se abre al loguearse y se mantiene siempre abierto
+   * Subir imagen para chat — POST /chat/{chatId}/upload-image
    */
-  conectarWebSocketNotificaciones(token: string): WebSocket {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsHost = window.location.host;
-    const wsUrl = `${protocol}//${wsHost}/chat/notifications?token=${encodeURIComponent(token)}`;
-    console.log("🔔 chatService.conectarWebSocketNotificaciones:", { url: wsUrl.split("?")[0] });
-    return new WebSocket(wsUrl);
-  },
-
-  /**
-   * Enviar mensaje a través de WebSocket (solo { contenido: ... })
-   */
-  enviarMensaje(ws: WebSocket, contenido: string): void {
-    if (ws.readyState !== WebSocket.OPEN) {
-      throw new Error("WebSocket no está conectado");
-    }
-    const payload = JSON.stringify({ contenido });
-    ws.send(payload);
-    console.log("📤 Mensaje enviado por WS:", { contenido: contenido.substring(0, 50) });
+  async subirImagenChat(chatId: number, file: File): Promise<MensajeImagen> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post<MensajeImagen>(
+      `${CHAT_PREFIX}/${chatId}/upload-image`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return response.data;
   },
 };

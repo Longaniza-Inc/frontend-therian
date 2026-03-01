@@ -137,6 +137,46 @@ class FeedService {
       throw error;
     }
   }
+
+  /**
+   * Obtener opciones de filtros disponibles
+   */
+  static async getFilterOptions(): Promise<{
+    provincias: Array<{id_provincia: number; nombre_provincia: string}>;
+    tipos_persona: Array<{id_tipo_persona: number; nombre_tipo_persona: string}>;
+    generos: Array<{id_genero: number; nombre_genero: string}>;
+  }> {
+    try {
+      console.log("🔍 FeedService.getFilterOptions - Iniciando...");
+      const response = await api.get("/feed/filtros");
+      console.log("✅ Filter options cargadas:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error al cargar filter options:", error);
+      // Retornar opciones por defecto si falla
+      return {
+        provincias: [
+          { id_provincia: 1, nombre_provincia: "Buenos Aires" },
+          { id_provincia: 2, nombre_provincia: "Córdoba" },
+          { id_provincia: 3, nombre_provincia: "Rosario" },
+          { id_provincia: 4, nombre_provincia: "Mendoza" },
+          { id_provincia: 5, nombre_provincia: "La Plata" }
+        ],
+        tipos_persona: [
+          { id_tipo_persona: 1, nombre_tipo_persona: "Therianthrope" },
+          { id_tipo_persona: 2, nombre_tipo_persona: "Furry" },
+          { id_tipo_persona: 3, nombre_tipo_persona: "Otherkin" },
+          { id_tipo_persona: 4, nombre_tipo_persona: "Polimorfo" }
+        ],
+        generos: [
+          { id_genero: 1, nombre_genero: "Masculino" },
+          { id_genero: 2, nombre_genero: "Femenino" },
+          { id_genero: 3, nombre_genero: "No binario" },
+          { id_genero: 4, nombre_genero: "Prefiero no especificar" }
+        ],
+      };
+    }
+  }
 }
 
 export default FeedService;

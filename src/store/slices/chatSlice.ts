@@ -138,6 +138,25 @@ const chatSlice = createSlice({
     resetRefreshFlag(state) {
       state.shouldRefreshList = false;
     },
+
+    /** Marcar un mensaje como eliminado (soft delete desde WS message_deleted) */
+    deleteMessage(state, action: PayloadAction<{ chatId: number; mensajeId: number | string }>) {
+      const { chatId, mensajeId } = action.payload;
+      const msgs = state.messagesByChat[chatId];
+      if (!msgs) return;
+      const idx = msgs.findIndex(
+        (m) => m.id_mensaje !== undefined && String(m.id_mensaje) === String(mensajeId)
+      );
+      if (idx !== -1) {
+        msgs[idx] = {
+          ...msgs[idx],
+          eliminado: true,
+          contenido: null,
+          imagenes: [],
+          tiempo_restante_segundos: 0,
+        };
+      }
+    },
   },
 });
 
@@ -153,6 +172,7 @@ export const {
   clearChats,
   invalidateChatList,
   resetRefreshFlag,
+  deleteMessage,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

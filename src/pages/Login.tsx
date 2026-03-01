@@ -10,7 +10,7 @@ const Login = () => {
       {/* Logo */}
       <div className="mb-6 flex flex-col items-center">
         <img src={logoColor} alt="Therian App" className="h-24 w-24 mb-3" />
-        <h1 className="text-3xl font-extrabold text-primary">thalk</h1>
+        <h1 className="text-3xl font-extrabold text-primary">PawTalk</h1>
         <p className="mt-1 text-sm text-muted-foreground">Tu comunidad therian 🌿</p>
       </div>
 

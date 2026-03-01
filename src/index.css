@@ -91,9 +91,17 @@
     @apply border-border;
   }
 
+  html {
+    overscroll-behavior: none;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Nunito', sans-serif;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
   }
 }
 

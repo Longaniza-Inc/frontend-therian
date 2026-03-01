@@ -10,7 +10,7 @@ const Register = () => {
       {/* Logo */}
       <div className="mb-4 flex flex-col items-center">
         <img src={logoColor} alt="Therian App" className="h-16 w-16 mb-2" />
-        <h1 className="text-2xl font-extrabold text-primary">thalk</h1>
+        <h1 className="text-2xl font-extrabold text-primary">PawTalk</h1>
       </div>
 
       {/* Header */}

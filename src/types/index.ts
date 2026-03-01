@@ -132,6 +132,8 @@ export interface FeedCard {
   photos: string[];
   descriptionSections: DescriptionSection[];
   distance?: number;
+  tags?: string[];
+  provincia?: string;
 }
 
 // Chat message

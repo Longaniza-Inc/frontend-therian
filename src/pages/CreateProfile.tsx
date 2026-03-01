@@ -20,6 +20,16 @@ const DEFAULT_AVATARS = [
 
 const TOTAL_STEPS = 9;
 
+/**
+ * Calcular edad a partir de fecha de nacimiento
+ */
+const calculateAge = (birthdate: string): number => {
+  if (!birthdate) return 0;
+  const birth = new Date(birthdate);
+  const today = new Date();
+  return today.getFullYear() - birth.getFullYear() - (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
+};
+
 const STEP_INFO: { emoji: string; title: string; subtitle: string }[] = [
   { emoji: "👋", title: "¿Cómo te llamas?", subtitle: "Cuéntanos tu nombre y elige un username único para la manada" },
   { emoji: "🎂", title: "¿Cuándo naciste?", subtitle: "Necesitamos saber tu fecha de nacimiento para verificar tu edad" },
@@ -196,6 +206,15 @@ const CreateProfile = () => {
   };
 
   const handleNext = async () => {
+    // ✅ VALIDACIÓN DE EDAD en Step 1 (Birthdate)
+    if (step === 1) {
+      const age = calculateAge(birthdate);
+      if (age < 18) {
+        alert("❌ Debes tener al menos 18 años para registrarte");
+        return;
+      }
+    }
+
     if (step < TOTAL_STEPS - 1) {
       setStep(step + 1);
     } else {
@@ -382,10 +401,25 @@ const CreateProfile = () => {
 
           {step === 1 && (
             <div className="animate-fade-in">
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)}
-                  className="w-full rounded-2xl border border-input bg-secondary/50 py-4 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" />
+              <div className="space-y-3">
+                <div className="relative">
+                  <Calendar className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <input 
+                    type="date" 
+                    value={birthdate} 
+                    onChange={(e) => setBirthdate(e.target.value)}
+                    max={new Date(new Date().getFullYear() - 18, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
+                    min={new Date(new Date().getFullYear() - 100, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
+                    className="w-full rounded-2xl border border-input bg-secondary/50 py-4 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" />
+                </div>
+                {birthdate && (() => {
+                  const age = calculateAge(birthdate);
+                  return (
+                    <p className={`text-sm font-semibold ${age < 18 ? 'text-destructive' : 'text-primary'}`}>
+                      {age < 18 ? '❌ Debes tener al menos 18 años' : `✅ Tienes ${age} años`}
+                    </p>
+                  );
+                })()}
               </div>
             </div>
           )}

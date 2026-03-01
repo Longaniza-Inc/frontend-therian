@@ -260,8 +260,10 @@ const Profile = () => {
 
   // Cuando entra en modo edición, copiar datos actuales
   const startEditing = async () => {
+    let catalogs = { newProvincias: provincias, newTipos: tipoPersonas, newEtiquetas: etiquetasCatalog };
+    
     if (!catalogsLoaded) {
-      await loadCatalogs();
+      catalogs = await loadCatalogs();
     }
     
     // Después de cargar catálogos, seteo los valores
@@ -269,25 +271,27 @@ const Profile = () => {
       setEditUsername(myProfile.user_name || "");
       setEditBio(myProfile.bio || "");
       
-      // Esperar brevemente para asegurar que los catálogos se hayan actualizado
-      setTimeout(() => {
-        const tipoMatch = tipoPersonas.find((t) => t.nombre === myProfile.tipo_de_therian);
-        setEditTipoPersonaId(tipoMatch?.id ?? null);
-        const provMatch = provincias.find((p) => p.nombre === myProfile.provincia);
-        setEditProvinciaId(provMatch?.id ?? null);
-      }, 100);
+      const tipoMatch = catalogs.newTipos.find((t) => t.nombre === myProfile.tipo_de_therian);
+      setEditTipoPersonaId(tipoMatch?.id ?? null);
+      const provMatch = catalogs.newProvincias.find((p) => p.nombre === myProfile.provincia);
+      setEditProvinciaId(provMatch?.id ?? null);
       
       // Etiquetas: buscar ids por nombre
       const etqIds = (myProfile.etiqueta ?? []).map((name) => {
-        const match = etiquetasCatalog.find((e) => e.nombre === name);
+        const match = catalogs.newEtiquetas.find((e) => e.nombre === name);
         return match?.id;
       }).filter((id): id is number => id !== undefined);
       setEditEtiquetas(etqIds);
+      
+      console.log("📌 Etiquetas cargadas desde perfil:", {
+        nombres: myProfile.etiqueta,
+        ids: etqIds,
+      });
     }
     
     // Cargar imágenes existentes - mapear URLs con IDs (arrays paralelos del backend)
-    const rawImagenes = myProfile.imagenes ?? [];
-    const rawIds = (myProfile as any).id_imagenes ?? [];
+    const rawImagenes = myProfile?.imagenes ?? [];
+    const rawIds = (myProfile as any)?.id_imagenes ?? [];
     
     console.log("🖼️ Cargando imágenes. Estructura recibida:", {
       imagenes_count: rawImagenes.length,
@@ -337,15 +341,11 @@ const Profile = () => {
       setEtiquetasCatalog(newEtiquetas);
       setCatalogsLoaded(true);
       
-      // Si estamos editando y el perfil existe, actualiza los valores
-      if (editing && myProfile) {
-        const tipoMatch = newTipos.find((t) => t.nombre === myProfile.tipo_de_therian);
-        setEditTipoPersonaId(tipoMatch?.id ?? null);
-        const provMatch = newProvincias.find((p) => p.nombre === myProfile.provincia);
-        setEditProvinciaId(provMatch?.id ?? null);
-      }
+      // Retornar los datos para usarlos inmediatamente en startEditing
+      return { newProvincias, newTipos, newEtiquetas };
     } catch (err) {
       console.error("❌ Error cargando catálogos:", err);
+      return { newProvincias: [], newTipos: [], newEtiquetas: [] };
     }
   };
 

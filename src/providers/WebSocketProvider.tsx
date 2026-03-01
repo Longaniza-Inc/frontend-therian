@@ -8,6 +8,7 @@ import {
   clearChats,
   addActiveChatId,
   invalidateChatList,
+  deleteMessage,
 } from "@/store/slices/chatSlice";
 
 // Backend URL para WebSockets — configurable mediante VITE_BACKEND_URL
@@ -22,13 +23,26 @@ interface WebSocketContextValue {
   ensureChatWs: (chatId: number) => void;
   /** Enviar mensaje por el WS de un chat */
   sendMessage: (chatId: number, contenido: string) => void;
+  /** Enviar mensaje completo (con reply/imagen) por WS */
+  sendWsMessage: (chatId: number, payload: WsOutgoingMessage) => void;
   /** Verificar si un chat tiene WS abierto */
   isChatConnected: (chatId: number) => boolean;
+}
+
+/** Payload que se envía al backend por WS */
+export interface WsOutgoingMessage {
+  type?: string;
+  contenido?: string;
+  tipo?: "mensaje" | "imagen";
+  id_mensaje_reply?: number | string | null;
+  id_mensaje?: number | string;
+  imagenes?: Array<{ url: string; delete_url?: string }>;
 }
 
 const WebSocketContext = createContext<WebSocketContextValue>({
   ensureChatWs: () => {},
   sendMessage: () => {},
+  sendWsMessage: () => {},
   isChatConnected: () => false,
 });
 
@@ -50,6 +64,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const notifReconnect = useRef(0);
   const notifConnecting = useRef(false);
   const MAX_RECONNECT = 5;
+  // Ref para detectar cambios de token
+  const prevTokenRef = useRef<string | null>(null);
 
   /* ── HELPERS ────────────────────────────────────────────── */
 
@@ -61,6 +77,38 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const host = url.hostname + (url.port ? `:${url.port}` : "");
     return `${proto}//${host}${path}?token=${encodeURIComponent(token)}`;
   }, []);
+
+  /* ── TOKEN REFRESH → RECONECTAR WS ────────────────────── */
+
+  useEffect(() => {
+    const currentToken = auth.tokens?.accessToken;
+    
+    // Si el token cambió (se refrescó), reconectar los WS
+    if (currentToken && prevTokenRef.current && prevTokenRef.current !== currentToken) {
+      console.log("🔄 Token refrescado — reconectando WebSockets...");
+      
+      // Cerrar notificaciones WS
+      if (notifWsRef.current && notifWsRef.current.readyState === WebSocket.OPEN) {
+        notifWsRef.current.close(1000, "Token renovado");
+      }
+      notifWsRef.current = null;
+      notifConnecting.current = false;
+      notifReconnect.current = 0;
+      
+      // Cerrar todos los WS de chats
+      chatWsMap.current.forEach((ws) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1000, "Token renovado");
+        }
+      });
+      chatWsMap.current.clear();
+      
+      // Los efectos abajo se encargarán de reconectar con el nuevo token
+    }
+    
+    // Actualizar token anterior
+    prevTokenRef.current = currentToken || null;
+  }, [auth.tokens?.accessToken]);
 
   /* ── WS NOTIFICACIONES (global, siempre abierto) ───────── */
 
@@ -211,8 +259,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
         if (data.type === "pong") return;
 
+        // message_deleted → marcar el mensaje como eliminado en Redux
+        if (data.type === "message_deleted") {
+          dispatch(deleteMessage({ chatId, mensajeId: data.id_mensaje }));
+          return;
+        }
+
         // new_message o cualquier frame con contenido
-        if (data.type === "new_message" || data.contenido) {
+        if (data.type === "new_message" || data.contenido || data.tipo === "imagen") {
           const msg: Mensaje = {
             id_mensaje: data.id_mensaje,
             chat_id: data.chat_id ?? chatId,
@@ -220,6 +274,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             contenido: data.contenido,
             fecha: data.fecha,
             esLeido: data.esLeido,
+            tipo: data.tipo || "mensaje",
+            id_mensaje_reply: data.id_mensaje_reply || null,
+            imagenes: data.imagenes || [],
           };
           dispatch(addMessage({ chatId, mensaje: msg }));
         }
@@ -252,6 +309,15 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return;
     }
     ws.send(JSON.stringify({ contenido }));
+  }, []);
+
+  const sendWsMessage = useCallback((chatId: number, payload: WsOutgoingMessage) => {
+    const ws = chatWsMap.current.get(chatId);
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.error("❌ WS no abierto para chat:", chatId);
+      return;
+    }
+    ws.send(JSON.stringify(payload));
   }, []);
 
   const isChatConnected = useCallback((chatId: number) => {
@@ -294,7 +360,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   /* ── RENDER ────────────────────────────────────────────── */
 
-  const value: WebSocketContextValue = { ensureChatWs, sendMessage, isChatConnected };
+  const value: WebSocketContextValue = { ensureChatWs, sendMessage, sendWsMessage, isChatConnected };
 
   return (
     <WebSocketContext.Provider value={value}>

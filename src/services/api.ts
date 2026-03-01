@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { store } from "@/store";
+import { setTokens, logout } from "@/store/slices/authSlice";
 
 // API Base URL — configurable mediante variable de entorno VITE_BACKEND_URL
 // Ver archivo .env para cambiar la URL según el entorno
@@ -10,10 +11,27 @@ const api: AxiosInstance = axios.create({
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "69420",  // ngrok requiere este header para requests desde navegador
+    "ngrok-skip-browser-warning": "69420",
   },
-  withCredentials: true,  // Incluir cookies/credentials
+  withCredentials: true,
 });
+
+/* ═══════════════════════════════════════
+   TOKEN REFRESH — cola de reintentos
+   ═══════════════════════════════════════ */
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (err: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((p) => {
+    if (error) p.reject(error);
+    else p.resolve(token!);
+  });
+  failedQueue = [];
+};
 
 // Request interceptor — attach auth token
 api.interceptors.request.use(
@@ -25,71 +43,90 @@ api.interceptors.request.use(
       method: config.method?.toUpperCase(),
       url: config.url,
       hasToken: !!token,
-      tokenLength: token ? token.length : 0,
-      tokenPreview: token ? token.substring(0, 20) + "..." : "NO TOKEN",
-      params: config.params,
-      data: config.data ? (typeof config.data === "string" ? JSON.parse(config.data) : config.data) : "none",
     });
     
-    // Agregar token si existe
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log("✅ Token agregado al header Authorization");
-    } else {
-      console.warn("⚠️ NO HAY TOKEN EN REDUX - Request irá sin autenticación");
     }
-    
-    // Agregar header ngrok para requests desde navegador (bypass warning page)
     config.headers["ngrok-skip-browser-warning"] = "69420";
     
     return config;
   },
-  (error) => {
-    console.error("❌ Request interceptor error:", error);
-    return Promise.reject(error);
-  },
+  (error) => Promise.reject(error),
 );
 
-// Response interceptor — handle errors globally
+// Response interceptor — handle 401 with token refresh
 api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    console.log("✅ Response interceptor - OK:", {
-      status: response.status,
-      url: response.config.url,
-      dataSize: JSON.stringify(response.data).length,
-      dataKeys: response.data ? Object.keys(response.data) : []
-    });
-    return response;
-  },
-  (error) => {
+  (response: AxiosResponse) => response,
+  async (error) => {
+    const originalRequest = error.config;
     const status = error.response?.status;
-    const url = error.config?.url;
-    
-    console.error("❌ Response interceptor - Error:", {
-      message: error.message,
-      status: status,
-      url: url,
-      responseData: error.response?.data ? JSON.stringify(error.response.data).slice(0, 300) : "no data",
-      hasResponse: !!error.response,
-      isNetworkError: !error.response && error.message
-    });
-    
-    // ═══════════════════════════════════════════════════════════════
-    // SOLO hacer logout en 401 autenticado (token expirado/inválido)
-    // ═══════════════════════════════════════════════════════════════
-    if (status === 401) {
-      console.warn("⚠️ 401 Unauthorized — Token inválido/expirado. Despachando logout...");
-      store.dispatch({ type: "auth/logout" });
-    } else if (status && status >= 500) {
-      console.error("❌ Error del servidor (5xx) — NO hacer logout. Solo rechazar la promesa.");
-    } else if (status === 404) {
-      console.warn("⚠️ Recurso no encontrado (404) — NO hacer logout.");
-    } else if (!error.response) {
-      console.error("❌ Error de red/conexión — NO hacer logout.");
-    } else {
-      console.warn(`⚠️ Otro error HTTP (${status}) — NO hacer logout automático.`);
+
+    // Si es 401 y NO es la request de refresh y NO es un reintento
+    if (status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/auth/refresh")) {
+      const state = store.getState();
+      const refreshToken = state.auth.tokens?.refreshToken;
+
+      if (!refreshToken) {
+        console.warn("⚠️ 401 sin refresh token — haciendo logout");
+        store.dispatch(logout());
+        return Promise.reject(error);
+      }
+
+      // Si ya hay otro refresh en curso, encolar esta request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token: string) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              originalRequest._retry = true;
+              resolve(api(originalRequest));
+            },
+            reject: (err: any) => reject(err),
+          });
+        });
+      }
+
+      isRefreshing = true;
+      originalRequest._retry = true;
+
+      try {
+        console.log("🔄 Intentando refresh token...");
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          refresh_token: refreshToken,
+        });
+
+        const data = response.data;
+        const newAccessToken = data.access_token || data.accessToken;
+        const newRefreshToken = data.refresh_token || data.refreshToken || refreshToken;
+
+        console.log("✅ Token refrescado exitosamente");
+
+        store.dispatch(setTokens({
+          accessToken: newAccessToken,
+          tokenType: "bearer",
+          refreshToken: newRefreshToken,
+          userId: state.auth.userId ?? undefined,
+        }));
+
+        // Reintentar la request original con el nuevo token
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        processQueue(null, newAccessToken);
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.error("❌ Refresh token falló — haciendo logout");
+        processQueue(refreshError, null);
+        store.dispatch(logout());
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
-    
+
+    if (!error.response) {
+      console.error("❌ Error de red/conexión:", error.message);
+    }
+
     return Promise.reject(error);
   },
 );
