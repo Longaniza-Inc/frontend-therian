@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import logoColor from "@/assets/logo-color.png";
+import logoColor from "@/assets/pawtalk-logo.png";
 import { useAuth } from "@/hooks/useAuth";
 
 const Register = () => {
@@ -15,7 +15,7 @@ const Register = () => {
 
       {/* Header */}
       <div className="mb-10 text-center">
-        <h2 className="text-2xl font-bold text-foreground">Creemos tu espacio seguro 🌿</h2>
+        <h2 className="text-2xl font-bold text-foreground">Creemos tu espacio seguro</h2>
         <p className="mt-2 text-muted-foreground">Solo un paso para unirte a la manada</p>
       </div>
 

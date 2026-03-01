@@ -1,11 +1,12 @@
 import { useState, useRef, TouchEvent, useEffect } from "react";
 import { Undo2, X, ThumbsUp, SlidersHorizontal, Bell, MapPin } from "lucide-react";
-import logoColor from "@/assets/logo-color.png";
+import logoColor from "@/assets/pawtalk-logo.png";
 import reportarIcon from "@/assets/reportar.png";
 import BottomNav from "@/components/BottomNav";
-import { useAppSelector } from "@/hooks/useAppDispatch";
+import { useAppSelector, useAppDispatch } from "@/hooks/useAppDispatch";
 import FeedService from "@/services/feedService";
 import DenunciaService from "@/services/denunciaService";
+import { setFeedCards, setCurrentIndex as setFeedIndex, setFilterOptions as setReduxFilterOptions, setRefreshing, setFeedError } from "@/store/slices/feedSlice";
 import type { FeedCard, SwipeAction, SwipePayload } from "@/types";
 
 const MOCK_CARDS: FeedCard[] = [
@@ -158,10 +159,18 @@ function transformBackendUserToFeedCard(user: any): FeedCard {
 
 const Feed = () => {
   const auth = useAppSelector((state) => state.auth);
-  const [cards, setCards] = useState<FeedCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const dispatch = useAppDispatch();
+
+  // --- Redux cache ---
+  const cachedCards = useAppSelector((state) => state.feed.cards);
+  const cachedIndex = useAppSelector((state) => state.feed.currentIndex);
+  const cachedFilterOptions = useAppSelector((state) => state.feed.filterOptions);
+  const cardsLoaded = useAppSelector((state) => state.feed.cardsLoaded);
+  const filterOptionsLoaded = useAppSelector((state) => state.feed.filterOptionsLoaded);
+  const isRefreshing = useAppSelector((state) => state.feed.isRefreshing);
+  const feedError = useAppSelector((state) => state.feed.error);
+
+  // Local UI state (NOT cached — resets per visit)
   const [photoIndex, setPhotoIndex] = useState(0);
   const [lastAction, setLastAction] = useState<{ index: number; action: SwipeAction } | null>(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -185,12 +194,20 @@ const Feed = () => {
     tipo_persona: "",
     genero: ""
   });
-  const [filterOptions, setFilterOptions] = useState({
+
+  // Derived: use cached filter options or empty defaults
+  const filterOptions = cachedFilterOptions || {
     provincias: [] as Array<{id_provincia: number; nombre_provincia: string}>,
     tipos_persona: [] as Array<{id_tipo_persona: number; nombre_tipo_persona: string}>,
     generos: [] as Array<{id_genero: number; nombre_genero: string}>
-  });
-  const [loadingFilterOptions, setLoadingFilterOptions] = useState(true);
+  };
+  const loadingFilterOptions = !filterOptionsLoaded;
+
+  // Loading: only show spinner if no cached data
+  const loading = !cardsLoaded && isRefreshing;
+  const error = feedError;
+  const cards = cachedCards;
+  const currentIndex = cachedIndex;
 
   // Swipe card state
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -201,47 +218,31 @@ const Feed = () => {
   const photoTouchStartY = useRef(0);
   const isPhotoSwipe = useRef(false);
 
-  // Cargar opciones de filtros
+  // Cargar opciones de filtros (usa cache)
   useEffect(() => {
-    console.log("🎬 Cargando opciones de filtros...");
+    if (filterOptionsLoaded) return;
     const loadFilterOptions = async () => {
       try {
-        setLoadingFilterOptions(true);
         const options = await FeedService.getFilterOptions();
-        
-        // Mapear respuesta del backend correctamente
         const mappedOptions = {
           provincias: Array.isArray(options.provincias) ? options.provincias : [],
           tipos_persona: Array.isArray(options.tipos_persona) ? options.tipos_persona : [],
           generos: Array.isArray(options.generos) ? options.generos : []
         };
-        
-        console.log("✅ Opciones de filtros cargadas:", mappedOptions);
-        setFilterOptions(mappedOptions);
+        dispatch(setReduxFilterOptions(mappedOptions));
       } catch (error) {
-        console.error("❌ Error cargando filter options:", error);
-        // Mantener valores por defecto si hay error
-        setFilterOptions({
-          provincias: [],
-          tipos_persona: [],
-          generos: []
-        });
-      } finally {
-        setLoadingFilterOptions(false);
+        console.error("Error cargando filter options:", error);
       }
     };
     loadFilterOptions();
-  }, []);
+  }, [filterOptionsLoaded, dispatch]);
 
   // Función para recargar feed con filtros actuales
   const loadFeedWithFilters = async (userId: number) => {
     try {
-      setLoading(true);
-      setError(null);
+      dispatch(setRefreshing(true));
+      dispatch(setFeedError(null));
 
-      console.log("🎬 Cargando feed con filtros:", filters);
-
-      // Usar getFeedFiltered si hay filtros aplicados
       const hasActiveFilters = 
         filters.provincia !== "" || 
         filters.tipo_persona !== "" || 
@@ -263,61 +264,26 @@ const Feed = () => {
         response = await FeedService.getFeed(userId);
       }
 
-      console.log("📦 Response en Feed.tsx:", response);
-      
-      // Transformar datos del backend a FeedCard
       const feedCards = (response.users || []).map(transformBackendUserToFeedCard);
-      console.log("🎴 Feed cargado:", {
-        totalUsuarios: feedCards.length,
-        usuarios: feedCards.map(u => ({ id: u.id, name: u.name, age: u.age }))
-      });
-      
-      setCards(feedCards);
-      setCurrentIndex(0);
-      setPhotoIndex(0);
+      dispatch(setFeedCards(feedCards));
     } catch (err: any) {
-      console.error("❌ Error cargando feed con filtros:", err);
-      setError(err.message || "Error al cargar el feed");
-      setCards([]);
-    } finally {
-      setLoading(false);
+      console.error("Error cargando feed:", err);
+      dispatch(setFeedError(err.message || "Error al cargar el feed"));
     }
   };
 
-  // Cargar usuarios del feed
+  // Cargar usuarios del feed (usa cache: si ya hay cards, refresca en background)
   useEffect(() => {
-    console.log("🎬 Feed.tsx - useEffect ejecutado");
-    console.log("👤 Estado de auth completo:", {
-      tokens: !!auth.tokens,
-      googleId: auth.googleId,
-      email: auth.email,
-      isAuthenticated: auth.isAuthenticated
-    });
-
-    // Obtener userId: prioridad a auth.userId del registro/JWT
     let userId: number | null = null;
-    
-    if (auth.userId) {
-      userId = auth.userId;
-      console.log("✅ Usando userId del registro/JWT:", userId);
-    }
+    if (auth.userId) userId = auth.userId;
 
     if (!userId) {
-      console.error("❌ No hay userId disponible, auth.userId:", auth.userId);
-      setError("Usuario no autenticado o sin información completa");
-      setLoading(false);
+      if (!cardsLoaded) dispatch(setFeedError("Usuario no autenticado"));
       return;
     }
 
-    console.log("🎬 Iniciando carga de feed para userId del usuario autenticado:", userId);
-
-    // Ejecutar si hay auth (userId O googleId O tokens)
     if (auth.userId || auth.googleId || auth.tokens) {
       loadFeedWithFilters(userId);
-    } else {
-      console.warn("⚠️ No hay autenticación (ni userId, ni googleId ni tokens)");
-      setLoading(false);
-      setError("No autenticado");
     }
   }, [auth.userId, auth.googleId, auth.tokens]);
 
@@ -341,7 +307,7 @@ const Feed = () => {
 
     if (action === "undo") {
       if (lastAction && currentIndex > 0) {
-        setCurrentIndex((prev) => prev - 1);
+        dispatch(setFeedIndex(currentIndex - 1));
         setPhotoIndex(0);
         setShowFullDescription(false);
         setLastAction(null);
@@ -365,7 +331,7 @@ const Feed = () => {
 
     sendSwipeAction({ targetUserId: currentCard.id, action }, userId);
     setLastAction({ index: currentIndex, action });
-    setCurrentIndex((prev) => prev + 1);
+    dispatch(setFeedIndex(currentIndex + 1));
     setPhotoIndex(0);
     setShowFullDescription(false);
     setSwipeOffset(0);
@@ -422,7 +388,7 @@ const Feed = () => {
 
       // Hacer dislike automático (pasar a siguiente carta)
       setLastAction({ index: currentIndex, action: "dislike" });
-      setCurrentIndex((prev) => prev + 1);
+      dispatch(setFeedIndex(currentIndex + 1));
       setPhotoIndex(0);
       setShowFullDescription(false);
       setSwipeOffset(0);
@@ -531,7 +497,7 @@ const Feed = () => {
       </div>
 
       {/* Card area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-4 pb-24">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-4" style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}>
         {loading && (
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>

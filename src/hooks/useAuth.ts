@@ -1,6 +1,10 @@
 import { useCallback } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useAppDispatch, useAppSelector } from "./useAppDispatch";
 import { setLoading, setTokens, setGoogleInfo, setError, logout as logoutAction } from "@/store/slices/authSlice";
+import { clearProfile } from "@/store/slices/userSlice";
+import { clearChats } from "@/store/slices/chatSlice";
+import { clearFeed } from "@/store/slices/feedSlice";
 import { authService } from "@/services/authService";
 import { decodeJWT } from "@/lib/jwt";
 
@@ -69,7 +73,12 @@ export function useAuth() {
     try {
       console.log("🔐 loginWithGoogle...");
       dispatch(setLoading(true));
-      const url = await authService.googleLogin();
+      
+      // Detectar si es plataforma mobile (Capacitor nativa) o web
+      const clientType = Capacitor.isNativePlatform() ? "mobile" : "web";
+      console.log("📱 Client type:", clientType);
+      
+      const url = await authService.googleLogin(clientType);
       if (url) {
         console.log("🔐 Redirigiendo a:", url);
         window.location.href = url;
@@ -201,9 +210,15 @@ export function useAuth() {
         await authService.logout(refreshToken);
       }
       
+      dispatch(clearProfile());
+      dispatch(clearChats());
+      dispatch(clearFeed());
       dispatch(logoutAction());
     } catch (err: any) {
       console.error("Error al logout:", err);
+      dispatch(clearProfile());
+      dispatch(clearChats());
+      dispatch(clearFeed());
       dispatch(logoutAction()); // Logout local anyway
     } finally {
       dispatch(setLoading(false));

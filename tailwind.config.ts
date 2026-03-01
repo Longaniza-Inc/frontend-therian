@@ -84,10 +84,23 @@ export default {
             height: "0",
           },
         },
+        "ring-pulse": {
+          "0%": {
+            outline: "2px solid rgba(107, 114, 128, 0.8)",
+            outlineOffset: "4px",
+            opacity: "1",
+          },
+          "100%": {
+            outline: "2px solid rgba(107, 114, 128, 0)",
+            outlineOffset: "6px",
+            opacity: "0",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "ring-pulse": "ring-pulse 0.6s ease-out",
       },
     },
   },

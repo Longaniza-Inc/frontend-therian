@@ -10,6 +10,8 @@ import { useAppSelector, useAppDispatch } from "@/hooks/useAppDispatch";
 import { setMyProfile } from "@/store/slices/userSlice";
 import { logout as logoutAction } from "@/store/slices/authSlice";
 import { clearProfile } from "@/store/slices/userSlice";
+import { clearChats } from "@/store/slices/chatSlice";
+import { clearFeed } from "@/store/slices/feedSlice";
 import { userService } from "@/services/userService";
 import { authService } from "@/services/authService";
 import { imagenService } from "@/services/imagenService";
@@ -545,6 +547,8 @@ const Profile = () => {
       // ignore
     }
     dispatch(clearProfile());
+    dispatch(clearChats());
+    dispatch(clearFeed());
     dispatch(logoutAction());
     navigate("/login");
   };

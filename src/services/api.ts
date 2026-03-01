@@ -1,6 +1,9 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { store } from "@/store";
 import { setTokens, logout } from "@/store/slices/authSlice";
+import { clearProfile } from "@/store/slices/userSlice";
+import { clearChats } from "@/store/slices/chatSlice";
+import { clearFeed } from "@/store/slices/feedSlice";
 
 // API Base URL — configurable mediante variable de entorno VITE_BACKEND_URL
 // Ver archivo .env para cambiar la URL según el entorno
@@ -69,6 +72,9 @@ api.interceptors.response.use(
 
       if (!refreshToken) {
         console.warn("⚠️ 401 sin refresh token — haciendo logout");
+        store.dispatch(clearProfile());
+        store.dispatch(clearChats());
+        store.dispatch(clearFeed());
         store.dispatch(logout());
         return Promise.reject(error);
       }
@@ -116,6 +122,9 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error("❌ Refresh token falló — haciendo logout");
         processQueue(refreshError, null);
+        store.dispatch(clearProfile());
+        store.dispatch(clearChats());
+        store.dispatch(clearFeed());
         store.dispatch(logout());
         return Promise.reject(refreshError);
       } finally {

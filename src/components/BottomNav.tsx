@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logoColor from "@/assets/logo-color.png";
 import logoSinColor from "@/assets/logo-sin-color.png";
@@ -9,17 +10,29 @@ import perfil2 from "@/assets/perfil-2.png";
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [animatingButton, setAnimatingButton] = useState<string | null>(null);
 
   const currentPath = location.pathname;
   const isFeed = currentPath === "/feed";
   const isChat = currentPath === "/chat";
   const isProfile = currentPath === "/profile";
 
+  const handleButtonClick = (path: string, buttonId: string) => {
+    setAnimatingButton(buttonId);
+    setTimeout(() => setAnimatingButton(null), 600);
+    navigate(path);
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 gradient-header px-6 py-3 flex items-center justify-around z-40 border-t border-border">
+    <div
+      className="fixed bottom-0 left-0 right-0 gradient-header px-6 pt-3 flex items-center justify-around z-40 border-t border-border"
+      style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+    >
       <button
-        onClick={() => navigate("/chat")}
-        className="flex flex-col items-center transition-colors"
+        onClick={() => handleButtonClick("/chat", "chat")}
+        className={`flex flex-col items-center transition-all ${
+          animatingButton === "chat" ? "animate-ring-pulse" : ""
+        }`}
       >
         <img
           src={isChat ? mensajes2 : mensajes1}
@@ -32,8 +45,10 @@ const BottomNav = () => {
       </button>
 
       <button
-        onClick={() => navigate("/feed")}
-        className="flex flex-col items-center transition-colors"
+        onClick={() => handleButtonClick("/feed", "feed")}
+        className={`flex flex-col items-center transition-all ${
+          animatingButton === "feed" ? "animate-ring-pulse" : ""
+        }`}
       >
         <img
           src={isFeed ? logoColor : logoSinColor}
@@ -46,8 +61,10 @@ const BottomNav = () => {
       </button>
 
       <button
-        onClick={() => navigate("/profile")}
-        className="flex flex-col items-center transition-colors"
+        onClick={() => handleButtonClick("/profile", "profile")}
+        className={`flex flex-col items-center transition-all ${
+          animatingButton === "profile" ? "animate-ring-pulse" : ""
+        }`}
       >
         <img
           src={isProfile ? perfil2 : perfil1}

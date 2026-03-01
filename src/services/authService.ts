@@ -20,10 +20,12 @@ export const authService = {
   },
 
   /** GET /auth/google/login — Obtener URL de autorización de Google */
-  async googleLogin(): Promise<string> {
-    console.log("📡 authService.googleLogin - Iniciando...");
+  async googleLogin(clientType: string = "web"): Promise<string> {
+    console.log("📁 authService.googleLogin - Iniciando...", { clientType });
     try {
-      const response = await api.get(`${AUTH_PREFIX}/google/login`);
+      const response = await api.get(`${AUTH_PREFIX}/google/login`, {
+        params: { client_type: clientType },
+      });
       console.log("📡 Response:", response.data);
       const url = response.data?.url;
       if (!url) {

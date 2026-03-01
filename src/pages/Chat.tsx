@@ -32,6 +32,7 @@ const Chat = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
   const [messageInput, setMessageInput] = useState("");
+  const [animatingChatId, setAnimatingChatId] = useState<number | null>(null);
 
   // Reply state
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
@@ -162,6 +163,12 @@ const Chat = () => {
     !msg ? "Sin mensajes" : msg.length > max ? `${msg.substring(0, max)}...` : msg;
 
   /* ═══ ENVIAR MENSAJES ═════════════════════════════════════ */
+
+  const handleSelectChat = (chatId: number) => {
+    setAnimatingChatId(chatId);
+    setTimeout(() => setAnimatingChatId(null), 600);
+    setSelectedChatId(chatId);
+  };
 
   const handleEnviar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -908,7 +915,7 @@ const Chat = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}>
         {chatList.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-muted-foreground">Cargando chats...</p>
@@ -927,8 +934,14 @@ const Chat = () => {
               return (
                 <button
                   key={`chat-${chat.id_chat}`}
-                  onClick={() => setSelectedChatId(chat.id_chat)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-secondary/60 transition-colors text-left"
+                  onClick={() => handleSelectChat(chat.id_chat)}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 transition-all text-left ${
+                    animatingChatId === chat.id_chat ? "animate-ring-pulse" : ""
+                  } ${
+                    selectedChatId === chat.id_chat
+                      ? "bg-secondary/70 border-l-4 border-primary"
+                      : "hover:bg-secondary/60"
+                  }`}
                 >
                   <div className="relative shrink-0">
                     {chat.imagen_url ? (

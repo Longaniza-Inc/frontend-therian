@@ -1,22 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Camera, Plus, ChevronLeft, ChevronDown, User, Phone, MapPin, Calendar, AtSign, FileText, Heart, Sparkles, ImageIcon, X, GripVertical } from "lucide-react";
-import logo from "@/assets/logo-therian.png";
+import { Camera, Plus, ChevronLeft, ChevronDown, User, Phone, MapPin, Calendar, AtSign, FileText, Heart, Sparkles, X, GripVertical } from "lucide-react";
+import logo from "@/assets/pawtalk-logo.png";
 import { THERIAN_TYPES, type TherianType } from "@/types";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { authService } from "@/services/authService";
 import type { RootState } from "@/store";
 
-const DEFAULT_AVATARS = [
-  "https://images.unsplash.com/photo-1474511320723-9a56873571b7?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1500534314263-d6c09705e82e?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1504006833117-8886a355efbf?w=200&h=200&fit=crop",
-  "https://images.unsplash.com/photo-1425082661507-d6d2cceb8893?w=200&h=200&fit=crop",
-];
+
 
 const TOTAL_STEPS = 9;
 
@@ -31,15 +24,15 @@ const calculateAge = (birthdate: string): number => {
 };
 
 const STEP_INFO: { emoji: string; title: string; subtitle: string }[] = [
-  { emoji: "👋", title: "¿Cómo te llamas?", subtitle: "Cuéntanos tu nombre y elige un username único para la manada" },
-  { emoji: "🎂", title: "¿Cuándo naciste?", subtitle: "Necesitamos saber tu fecha de nacimiento para verificar tu edad" },
-  { emoji: "📱", title: "Tu teléfono", subtitle: "Opcional, pero útil para que tus amigos te encuentren" },
-  { emoji: "📸", title: "Tus mejores fotos", subtitle: "Sube tu foto de perfil y algunas fotos más para que te conozcan" },
-  { emoji: "📍", title: "¿De dónde eres?", subtitle: "Selecciona tu provincia para encontrar therians cerca de ti" },
-  { emoji: "🐾", title: "¿Qué tipo eres?", subtitle: "Elige el tipo que más te represente, ¡no hay respuesta incorrecta!" },
-  { emoji: "🧑", title: "Tu género", subtitle: "Selecciona tu género" },
-  { emoji: "✨", title: "Sobre ti", subtitle: "Escribe una breve bio para que la manada te conozca mejor" },
-  { emoji: "💚", title: "Tus intereses", subtitle: "Elige lo que te apasiona para conectar con personas similares" },
+  { emoji: "", title: "¿Cómo te llamas?", subtitle: "Cuéntanos tu nombre y elige un username único para la manada" },
+  { emoji: "", title: "¿Cuándo naciste?", subtitle: "Necesitamos saber tu fecha de nacimiento para verificar tu edad" },
+  { emoji: "", title: "Tu teléfono", subtitle: "Opcional, pero útil para que tus amigos te encuentren" },
+  { emoji: "", title: "Tus mejores fotos", subtitle: "Sube tu foto de perfil y algunas fotos más para que te conozcan" },
+  { emoji: "", title: "¿De dónde eres?", subtitle: "Selecciona tu provincia para encontrar therians cerca de ti" },
+  { emoji: "", title: "¿Qué tipo eres?", subtitle: "Elige el tipo que más te represente, ¡no hay respuesta incorrecta!" },
+  { emoji: "", title: "Tu género", subtitle: "Selecciona tu género" },
+  { emoji: "", title: "Sobre ti", subtitle: "Escribe una breve bio para que la manada te conozca mejor" },
+  { emoji: "", title: "Tus intereses", subtitle: "Elige lo que te apasiona para conectar con personas similares" },
 ];
 
 const CreateProfile = () => {
@@ -66,7 +59,7 @@ const CreateProfile = () => {
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string>("");
   const [additionalPhotoFiles, setAdditionalPhotoFiles] = useState<File[]>([]);
   const [additionalPhotosPreviews, setAdditionalPhotosPreviews] = useState<string[]>([]);
-  const [showDefaultAvatars, setShowDefaultAvatars] = useState(false);
+  const [showTherianTypes, setShowTherianTypes] = useState(false);
   const [etiquetas, setEtiquetas] = useState<Array<{ id: number; nombre: string }>>([]);
   const [loadingEtiquetas, setLoadingEtiquetas] = useState(true);
   const [generos, setGeneros] = useState<Array<{ id: number; nombre: string }>>([]);
@@ -193,7 +186,11 @@ const CreateProfile = () => {
   const canGoNext = (): boolean => {
     switch (step) {
       case 0: return name.trim().length > 0 && username.trim().length > 0;
-      case 1: return birthdate.length > 0;
+      case 1: {
+        if (birthdate.length === 0) return false;
+        const age = calculateAge(birthdate);
+        return age >= 16 && age <= 80;
+      }
       case 2: return true; // phone is optional
       case 3: return profilePhotoPreview.length > 0; // profile photo required
       case 4: return provinciaSeleccionada !== null; // provincia required
@@ -209,8 +206,12 @@ const CreateProfile = () => {
     // ✅ VALIDACIÓN DE EDAD en Step 1 (Birthdate)
     if (step === 1) {
       const age = calculateAge(birthdate);
-      if (age < 18) {
-        alert("❌ Debes tener al menos 18 años para registrarte");
+      if (age < 16) {
+        alert("❌ Debes tener al menos 16 años para registrarte");
+        return;
+      }
+      if (age > 80) {
+        alert("❌ Debes tener 80 años o menos para registrarte");
         return;
       }
     }
@@ -408,17 +409,19 @@ const CreateProfile = () => {
                     type="date" 
                     value={birthdate} 
                     onChange={(e) => setBirthdate(e.target.value)}
-                    max={new Date(new Date().getFullYear() - 18, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
-                    min={new Date(new Date().getFullYear() - 100, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
+                    max={new Date(new Date().getFullYear() - 16, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
+                    min={new Date(new Date().getFullYear() - 80, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
                     className="w-full rounded-2xl border border-input bg-secondary/50 py-4 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all" />
                 </div>
                 {birthdate && (() => {
                   const age = calculateAge(birthdate);
-                  return (
-                    <p className={`text-sm font-semibold ${age < 18 ? 'text-destructive' : 'text-primary'}`}>
-                      {age < 18 ? '❌ Debes tener al menos 18 años' : `✅ Tienes ${age} años`}
-                    </p>
-                  );
+                  if (age < 16) {
+                    return <p className="text-sm font-semibold text-destructive">❌ Debes tener al menos 16 años</p>;
+                  } else if (age > 80) {
+                    return <p className="text-sm font-semibold text-destructive">❌ Debes tener 80 años o menos</p>;
+                  } else {
+                    return <p className="text-sm font-semibold text-primary">✅ Tienes {age} años</p>;
+                  }
                 })()}
               </div>
             </div>
@@ -469,36 +472,6 @@ const CreateProfile = () => {
                 </button>
               </div>
               <p className="text-center text-sm text-muted-foreground font-semibold">Foto principal</p>
-
-              {/* Default avatars toggle */}
-              {!profilePhotoPreview && (
-                <div className="text-center">
-                  <button
-                    onClick={() => setShowDefaultAvatars(!showDefaultAvatars)}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline transition-colors"
-                  >
-                    <ImageIcon className="h-4 w-4" />
-                    ¿No querés poner una foto? Elegí una de estas
-                  </button>
-                  {showDefaultAvatars && (
-                    <div className="grid grid-cols-3 gap-3 mt-4">
-                      {DEFAULT_AVATARS.map((url, i) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            setProfilePhotoPreview(url);
-                            setProfilePhotoFile(null);
-                            setShowDefaultAvatars(false);
-                          }}
-                          className="rounded-2xl overflow-hidden border-2 border-input hover:border-primary transition-all aspect-square active:scale-95"
-                        >
-                          <img src={url} alt={`Avatar ${i + 1}`} className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Additional photos - Carousel */}
               <div>
@@ -615,26 +588,58 @@ const CreateProfile = () => {
           )}
 
           {step === 5 && (
-            <div className="animate-fade-in">
+            <div className="animate-fade-in space-y-4">
               {loadingTipoPersonas ? (
                 <p className="text-center text-muted-foreground">Cargando tipos de personas...</p>
               ) : tipoPersonas.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {tipoPersonas.map((tipo) => {
-                    const selected = tipoPersonaSeleccionado === tipo.id;
-                    return (
-                      <button
-                        key={tipo.id}
-                        onClick={() => setTipoPersonaSeleccionado(tipo.id)}
-                        className={`rounded-2xl px-4 py-4 text-sm font-semibold transition-all active:scale-95 flex flex-col items-center gap-2 ${
-                          selected ? "bg-primary text-primary-foreground shadow-soft" : "bg-secondary text-foreground border border-input hover:bg-accent"
-                        }`}
-                      >
-                        {tipo.nombre}
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  {/* Humano always visible */}
+                  {tipoPersonas.find(t => t.nombre === 'Humano') && (
+                    <button
+                      onClick={() => setTipoPersonaSeleccionado(tipoPersonas.find(t => t.nombre === 'Humano')!.id)}
+                      className={`w-full rounded-2xl px-4 py-4 text-sm font-semibold transition-all active:scale-95 ${
+                        tipoPersonaSeleccionado === tipoPersonas.find(t => t.nombre === 'Humano')!.id
+                          ? "bg-primary text-primary-foreground shadow-soft"
+                          : "bg-secondary text-foreground border border-input hover:bg-accent"
+                      }`}
+                    >
+                      Humano
+                    </button>
+                  )}
+
+                  {/* Therians y Animales expandable */}
+                  <button
+                    onClick={() => setShowTherianTypes(!showTherianTypes)}
+                    className="w-full rounded-2xl px-4 py-4 text-sm font-semibold transition-all active:scale-95 bg-secondary text-foreground border border-input hover:bg-accent flex items-center justify-between"
+                  >
+                    <span>Therians y Animales</span>
+                    <ChevronDown 
+                      className={`h-4 w-4 transition-transform ${showTherianTypes ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {/* Other types - Expandable */}
+                  {showTherianTypes && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {tipoPersonas
+                        .filter(tipo => tipo.nombre !== 'Humano')
+                        .map((tipo) => {
+                          const selected = tipoPersonaSeleccionado === tipo.id;
+                          return (
+                            <button
+                              key={tipo.id}
+                              onClick={() => setTipoPersonaSeleccionado(tipo.id)}
+                              className={`rounded-2xl px-4 py-4 text-sm font-semibold transition-all active:scale-95 ${
+                                selected ? "bg-primary text-primary-foreground shadow-soft" : "bg-secondary text-foreground border border-input hover:bg-accent"
+                              }`}
+                            >
+                              {tipo.nombre}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  )}
+                </>
               ) : (
                 <p className="text-center text-muted-foreground">No hay tipos de personas disponibles</p>
               )}
