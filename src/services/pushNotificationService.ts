@@ -57,6 +57,9 @@ export async function getFCMToken(): Promise<string | null> {
     // Registrar el dispositivo para push notifications
     await PushNotifications.register();
 
+    // Pequeño delay para asegurar que Firebase está listo
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     // Obtener el token FCM real (no el token genérico de Capacitor)
     const { token } = await FCM.getToken();
     currentFcmToken = token;
@@ -103,6 +106,18 @@ export function setupPushListeners(options: {
   // Token de registro recibido (push genérico)
   PushNotifications.addListener("registration", (token) => {
     console.log("📱 Push registration token:", token.value.substring(0, 20) + "...");
+  });
+
+  // Token FCM refrescado
+  FCM.onTokenRefresh(() => {
+    console.log("🔄 Token FCM refrescado, actualizando...");
+    getFCMToken().then((token) => {
+      if (token) {
+        console.log("✅ Nuevo token FCM guardado:", token.substring(0, 20) + "...");
+        // El backend debería estar escuchando cambios de token y sincronizar automáticamente
+        // Si no, se puede enviar una llamada aquí to notify the backend
+      }
+    }).catch(err => console.error("❌ Error refrescando token FCM:", err));
   });
 
   // Error en el registro

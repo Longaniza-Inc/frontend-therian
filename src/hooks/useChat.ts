@@ -9,6 +9,7 @@ import {
   markHistoryRequested,
   markChatRead,
   deleteMessage,
+  updateChatPreview,
 } from "@/store/slices/chatSlice";
 
 /**
@@ -81,28 +82,56 @@ export const useChat = (chatId: number | null) => {
   const enviarMensaje = useCallback(
     (contenido: string) => {
       if (!chatId) return;
+      // Actualización optimista del preview
+      dispatch(updateChatPreview({
+        chat_id: chatId,
+        ultimo_mensaje: contenido,
+        id_emisor: auth.userId || 0,
+        timestamp: new Date().toISOString(),
+        unread_count: 0,
+        tipo_mensaje: "mensaje",
+      }));
       sendMessage(chatId, contenido);
     },
-    [chatId, sendMessage]
+    [chatId, sendMessage, auth.userId, dispatch]
   );
 
   // ── Enviar mensaje con reply ─────────────────────────────
   const enviarMensajeConReply = useCallback(
     (contenido: string, replyToId: number | string) => {
       if (!chatId) return;
+      // Actualización optimista del preview
+      dispatch(updateChatPreview({
+        chat_id: chatId,
+        ultimo_mensaje: contenido,
+        id_emisor: auth.userId || 0,
+        timestamp: new Date().toISOString(),
+        unread_count: 0,
+        tipo_mensaje: "mensaje",
+      }));
       sendWsMessage(chatId, {
         contenido,
         tipo: "mensaje",
         id_mensaje_reply: replyToId,
       });
     },
-    [chatId, sendWsMessage]
+    [chatId, sendWsMessage, auth.userId, dispatch]
   );
 
   // ── Enviar imagen ─────────────────────────────────────────
   const enviarImagen = useCallback(
     (imagenes: MensajeImagen[], replyToId?: number | string | null) => {
       if (!chatId) return;
+      // Actualización optimista del preview (mostrar que se envió imagen)
+      dispatch(updateChatPreview({
+        chat_id: chatId,
+        ultimo_mensaje: "📸 Foto",
+        id_emisor: auth.userId || 0,
+        timestamp: new Date().toISOString(),
+        unread_count: 0,
+        tipo_mensaje: "imagen",
+        imagen_url: imagenes[0]?.url || null,
+      }));
       const payload: WsOutgoingMessage = {
         tipo: "imagen",
         imagenes,
@@ -110,7 +139,7 @@ export const useChat = (chatId: number | null) => {
       if (replyToId) payload.id_mensaje_reply = replyToId;
       sendWsMessage(chatId, payload);
     },
-    [chatId, sendWsMessage]
+    [chatId, sendWsMessage, auth.userId, dispatch]
   );
 
   const isConnected = chatId ? isChatConnected(chatId) : false;

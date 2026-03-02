@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { chatService } from "@/services/chatService";
 import { useAppSelector, useAppDispatch } from "./useAppDispatch";
-import { setChatList, setMessagesForChat, markHistoryRequested, resetRefreshFlag, setChatsLoaded } from "@/store/slices/chatSlice";
+import { setChatList, setMessagesForChat, markHistoryRequested, resetRefreshFlag, setChatsLoaded, patchChatPreview } from "@/store/slices/chatSlice";
 
 /**
  * Hook que carga la lista de chats y los cachea en Redux.
@@ -52,6 +52,19 @@ export const useChats = () => {
             try {
               const mensajes = await chatService.obtenerHistorial(chat.id_chat);
               dispatch(setMessagesForChat({ chatId: chat.id_chat, mensajes }));
+
+              // Enriquecer tipo_mensaje del preview con el último mensaje del historial
+              if (mensajes.length > 0) {
+                const lastMsg = mensajes[mensajes.length - 1];
+                const isImage = lastMsg.tipo === "imagen" || (lastMsg.imagenes && lastMsg.imagenes.length > 0);
+                if (isImage && chat.tipo_mensaje !== "imagen") {
+                  dispatch(patchChatPreview({
+                    chatId: chat.id_chat,
+                    tipo_mensaje: "imagen",
+                    contenido_mensaje: "[Imagen]",
+                  }));
+                }
+              }
             } catch {
               dispatch(setMessagesForChat({ chatId: chat.id_chat, mensajes: [] }));
             }

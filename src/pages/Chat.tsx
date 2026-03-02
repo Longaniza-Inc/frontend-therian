@@ -79,10 +79,19 @@ const Chat = () => {
     return () => clearInterval(id);
   }, []);
 
-  // Auto-scroll
+  // Auto-scroll: instant al entrar al chat, smooth para mensajes nuevos
+  const isFirstScroll = useRef(true);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!messagesEndRef.current || mensajes.length === 0) return;
+    const behavior = isFirstScroll.current ? "instant" : "smooth";
+    messagesEndRef.current.scrollIntoView({ behavior: behavior as ScrollBehavior });
+    isFirstScroll.current = false;
   }, [mensajes]);
+
+  // Reset scroll flag cuando se cambia de chat
+  useEffect(() => {
+    isFirstScroll.current = true;
+  }, [selectedChatId]);
 
   // Clear state when switching chats
   useEffect(() => {
@@ -159,8 +168,14 @@ const Chat = () => {
     return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const truncar = (msg?: string, max = 50) =>
-    !msg ? "Sin mensajes" : msg.length > max ? `${msg.substring(0, max)}...` : msg;
+  const truncar = (msg?: string | null, max = 50, tipoMensaje?: string) => {
+    // Si es una imagen, mostrar "📸 Foto"
+    if (tipoMensaje === "imagen" || msg === "[Imagen]") {
+      return "📸 Foto";
+    }
+    // Si no hay contenido, mostrar "Sin mensajes"
+    return !msg ? "Sin mensajes" : msg.length > max ? `${msg.substring(0, max)}...` : msg;
+  };
 
   /* ═══ ENVIAR MENSAJES ═════════════════════════════════════ */
 
@@ -930,7 +945,7 @@ const Chat = () => {
           <div className="divide-y divide-border">
             {filteredChats.map((chat) => {
               const unread = unreadCounts[chat.id_chat] || 0;
-              const lastMessage = chat.contenido_mensaje || chat.ultimo_mensaje || "Sin mensajes";
+              const lastMessage = truncar(chat.contenido_mensaje, 50, chat.tipo_mensaje) || truncar(chat.ultimo_mensaje, 50, chat.tipo_mensaje);
               return (
                 <button
                   key={`chat-${chat.id_chat}`}
@@ -971,7 +986,7 @@ const Chat = () => {
                           unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"
                         }`}
                       >
-                        {truncar(lastMessage, 50)}
+                        {lastMessage}
                       </p>
                       {unread > 0 && (
                         <span className="ml-2 shrink-0 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1.5">

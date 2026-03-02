@@ -11,6 +11,8 @@ interface ChatUpdate {
   id_emisor: number;
   timestamp: string;
   unread_count: number;
+  tipo_mensaje?: string;
+  imagen_url?: string | null;
 }
 
 interface ChatState {
@@ -92,15 +94,36 @@ const chatSlice = createSlice({
 
     /** Evento chat_update del WS global: actualiza preview + mueve al top */
     updateChatPreview(state, action: PayloadAction<ChatUpdate>) {
-      const { chat_id, ultimo_mensaje, timestamp, unread_count } = action.payload;
+      const { chat_id, ultimo_mensaje, timestamp, unread_count, tipo_mensaje, imagen_url } = action.payload;
       const idx = state.chatList.findIndex((c) => c.id_chat === chat_id);
       if (idx !== -1) {
         state.chatList[idx].ultimo_mensaje = ultimo_mensaje;
+        state.chatList[idx].contenido_mensaje = ultimo_mensaje;
         state.chatList[idx].fecha_ultimo_mensaje = timestamp;
         state.unreadCounts[chat_id] = unread_count;
+        // Actualizar tipo_mensaje e imagen_url si se proporcionan
+        if (tipo_mensaje) {
+          state.chatList[idx].tipo_mensaje = tipo_mensaje;
+        }
+        if (imagen_url !== undefined) {
+          state.chatList[idx].imagen_url = imagen_url;
+        }
         // Mover al top
         const [moved] = state.chatList.splice(idx, 1);
         state.chatList.unshift(moved);
+      }
+    },
+
+    /** Parchar tipo_mensaje / contenido_mensaje sin reordenar la lista */
+    patchChatPreview(state, action: PayloadAction<{ chatId: number; tipo_mensaje?: string; contenido_mensaje?: string | null }>) {
+      const idx = state.chatList.findIndex((c) => c.id_chat === action.payload.chatId);
+      if (idx !== -1) {
+        if (action.payload.tipo_mensaje) {
+          state.chatList[idx].tipo_mensaje = action.payload.tipo_mensaje;
+        }
+        if (action.payload.contenido_mensaje !== undefined) {
+          state.chatList[idx].contenido_mensaje = action.payload.contenido_mensaje;
+        }
       }
     },
 
@@ -175,6 +198,7 @@ export const {
   setMessagesForChat,
   addMessage,
   updateChatPreview,
+  patchChatPreview,
   markChatRead,
   incrementUnread,
   addActiveChatId,

@@ -122,13 +122,13 @@ function transformBackendUserToFeedCard(user: any): FeedCard {
   
   const feedCard: FeedCard = {
     id: String(user.id_usuario || user.id),
-    name: user.nombre_usuario || user.nombre || "Usuario",
+    name: user.nombre_usuario || user.nombreUsuario || user.nombre || user.name || "Usuario",
     age: user.edad || 0,
-    therianType: user.tipo_therian || "no_therian",
+    therianType: user.tipo_therian || user.tipoTherian || "no_therian",
     bio: user.descripcion || user.bio || "Sin descripción",
     photos: photoUrls,
     tags: tags,
-    provincia: user.provincia || "No especificada",
+    provincia: user.provincia || user.nombreProvincia || "No especificada",
     descriptionSections: [
       { 
         title: "Sobre mi", 
@@ -136,11 +136,11 @@ function transformBackendUserToFeedCard(user: any): FeedCard {
       },
       { 
         title: "Tipo Therian", 
-        content: user.tipo_therian || "No especificado" 
+        content: user.tipo_therian || user.tipoTherian || "No especificado" 
       },
       { 
         title: "Ubicación", 
-        content: user.provincia || "Ubicación no disponible" 
+        content: user.provincia || user.nombreProvincia || "Ubicación no disponible" 
       },
     ],
   };

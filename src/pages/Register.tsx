@@ -1,9 +1,14 @@
 import { Link } from "react-router-dom";
 import logoColor from "@/assets/pawtalk-logo.png";
+import LoadingScreen from "@/components/LoadingScreen";
 import { useAuth } from "@/hooks/useAuth";
 
 const Register = () => {
   const { loginWithGoogle, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-10">

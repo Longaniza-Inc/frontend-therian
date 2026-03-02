@@ -9,6 +9,7 @@ interface AuthState {
   email: string | null;
   loading: boolean;
   error: string | null;
+  isInitializing: boolean;
 }
 
 const initialState: AuthState = {
@@ -19,6 +20,7 @@ const initialState: AuthState = {
   email: null,
   loading: false,
   error: null,
+  isInitializing: true,
 };
 
 // Recuperar estado inicial desde localStorage
@@ -27,7 +29,7 @@ const loadAuthFromStorage = (): AuthState => {
     const stored = localStorage.getItem("auth_state");
     if (stored) {
       const parsed = JSON.parse(stored);
-      console.log("📦 Auth state recuperado de localStorage:", {
+      console.log("📦 [authSlice] Auth state recuperado de localStorage:", {
         isAuthenticated: parsed.isAuthenticated,
         has_tokens: !!parsed.tokens,
         tokenLength: parsed.tokens?.accessToken?.length || 0,
@@ -35,11 +37,17 @@ const loadAuthFromStorage = (): AuthState => {
         userId: parsed.userId,
         email: parsed.email,
       });
-      return parsed;
+      // IMPORTANTE: isInitializing SIEMPRE comienza como true para validar token
+      console.log("🔐 [authSlice] Forzando isInitializing: true para validar sesión");
+      return {
+        ...parsed,
+        isInitializing: true,
+      };
     }
   } catch (error) {
-    console.error("❌ Error recuperando auth state:", error);
+    console.error("❌ [authSlice] Error recuperando auth state:", error);
   }
+  console.log("📦 [authSlice] Sin auth state en localStorage, usando initialState");
   return initialState;
 };
 
@@ -52,6 +60,7 @@ const saveAuthToStorage = (state: AuthState) => {
       userId: state.userId,
       googleId: state.googleId,
       email: state.email,
+      // IMPORTANTE: NO guardar isInitializing, siempre debe ser true al cargar
     }));
   } catch (error) {
     console.error("❌ Error guardando auth state:", error);
@@ -64,6 +73,10 @@ const authSlice = createSlice({
   reducers: {
     setLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload;
+    },
+    setInitializationComplete(state) {
+      console.log("🔐 [authSlice] setInitializationComplete - isInitializing: true → false");
+      state.isInitializing = false;
     },
     setTokens(state, action: PayloadAction<AuthTokens & { userId?: number }>) {
       state.tokens = {
@@ -110,5 +123,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setLoading, setTokens, setGoogleInfo, setError, logout } = authSlice.actions;
+export const { setLoading, setInitializationComplete, setTokens, setGoogleInfo, setError, logout } = authSlice.actions;
 export default authSlice.reducer;

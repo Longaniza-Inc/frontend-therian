@@ -9,6 +9,7 @@ import {
   addActiveChatId,
   invalidateChatList,
   deleteMessage,
+  incrementUnread,
 } from "@/store/slices/chatSlice";
 
 // Backend URL para WebSockets — configurable mediante VITE_BACKEND_URL
@@ -140,6 +141,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         console.log("✅ WS-Provider: notificaciones CONECTADO");
         notifReconnect.current = 0;
         notifConnecting.current = false;
+        // Solicitar sincronización al conectar (en caso de que haya nuevos chats pendientes)
+        ws.send(JSON.stringify({ type: "sync" }));
       };
 
       ws.onmessage = (ev) => {
@@ -188,6 +191,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               id_emisor: data.id_emisor,
               timestamp: data.timestamp,
               unread_count: data.unread_count,
+              tipo_mensaje: data.tipo_mensaje,
+              imagen_url: data.imagen_url,
             }));
           }
           
@@ -279,6 +284,17 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             imagenes: data.imagenes || [],
           };
           dispatch(addMessage({ chatId, mensaje: msg }));
+          
+          // Actualizar preview del chat con el nuevo mensaje
+          dispatch(updateChatPreview({
+            chat_id: chatId,
+            ultimo_mensaje: msg.contenido || (msg.tipo === "imagen" ? "[Imagen]" : ""),
+            id_emisor: msg.id_emisor,
+            timestamp: msg.fecha || new Date().toISOString(),
+            unread_count: data.unread_count ?? 0,
+            tipo_mensaje: msg.tipo,
+            imagen_url: msg.tipo === "imagen" && msg.imagenes?.length > 0 ? msg.imagenes[0].url : null,
+          }));
         }
       } catch { /* ignore bad frames */ }
     };
