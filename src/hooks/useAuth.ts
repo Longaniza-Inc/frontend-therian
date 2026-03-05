@@ -169,7 +169,15 @@ export function useAuth() {
         user_id: response.user_id,
         google_id: response.google_id,
         has_token: !!response.access_token,
+        deleted: response.deleted,
       });
+
+      // 🗑️ Si la cuenta fue eliminada
+      if (response.deleted) {
+        console.log("🗑️ Cuenta eliminada exitosamente:", response.email);
+        await logout();
+        return { deleted: true, response };
+      }
 
       if (response.access_token) {
         // Usuario existente

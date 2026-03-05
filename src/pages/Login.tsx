@@ -1,12 +1,24 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/store";
 import logoColor from "@/assets/pawtalk-logo.png";
 import { useAuth } from "@/hooks/useAuth";
+import { PrivacyPolicyModal, PrivacyAcceptance } from "@/components/PrivacyPolicy";
 
 const Login = () => {
   const { loginWithGoogle, loading } = useAuth();
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const { termsAccepted } = useSelector((state: RootState) => state.privacy);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-10">
+      {/* Privacy Policy Modal */}
+      <PrivacyPolicyModal
+        open={privacyModalOpen}
+        onOpenChange={setPrivacyModalOpen}
+      />
+
       {/* Logo */}
       <div className="mb-6 flex flex-col items-center">
         <img src={logoColor} alt="Therian App" className="h-24 w-24 mb-3" />
@@ -24,8 +36,8 @@ const Login = () => {
       <div className="w-full max-w-sm space-y-4">
         <button
           onClick={loginWithGoogle}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-input bg-secondary/50 py-4 text-foreground font-bold shadow-card hover:bg-accent active:scale-[0.98] transition-all disabled:opacity-50"
+          disabled={loading || !termsAccepted}
+          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-input bg-secondary/50 py-4 text-foreground font-bold shadow-card hover:bg-accent active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg className="h-6 w-6" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -43,6 +55,9 @@ const Login = () => {
             Crear cuenta
           </Link>
         </p>
+
+        {/* Privacy Acceptance */}
+        <PrivacyAcceptance onOpenModal={() => setPrivacyModalOpen(true)} />
       </div>
     </div>
   );

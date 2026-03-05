@@ -19,12 +19,13 @@ import CreateProfile from "./pages/CreateProfile";
 import Profile from "./pages/Profile";
 import Feed from "./pages/Feed";
 import Chat from "./pages/Chat";
+import DeleteAccount from "./pages/DeleteAccount";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 /** Rutas públicas que no necesitan esperar la carga inicial */
-const PUBLIC_PATHS = ["/", "/login", "/register", "/auth/callback", "/create-profile"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/auth/callback", "/create-profile", "/delete-account"];
 
 /** Componente interno: carga inicial de chats + perfil + rutas */
 const AppContent = () => {
@@ -79,6 +80,7 @@ const AppContent = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/create-profile" element={<CreateProfile />} />
+        <Route path="/delete-account" element={<DeleteAccount />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/chat" element={<Chat />} />

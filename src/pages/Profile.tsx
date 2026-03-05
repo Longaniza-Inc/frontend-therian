@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Pencil, LogOut, Camera, MapPin, Sparkles, X, Check,
-  ChevronDown, User, FileText, Tag, Shield, AlertCircle,
+  ChevronDown, User, FileText, Tag, Shield, AlertCircle, Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BottomNav from "@/components/BottomNav";
@@ -15,6 +15,7 @@ import { clearFeed } from "@/store/slices/feedSlice";
 import { userService } from "@/services/userService";
 import { authService } from "@/services/authService";
 import { imagenService } from "@/services/imagenService";
+import { deleteAccountService } from "@/services/deleteAccountService";
 import type { ProfileData, ProfileUpdateData } from "@/types";
 
 interface EditImage {
@@ -87,6 +88,10 @@ const Profile = () => {
 
   // Modal para cambiar imagen principal
   const [showChangePrincipal, setShowChangePrincipal] = useState(false);
+
+  // Modal para eliminar cuenta
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -553,6 +558,37 @@ const Profile = () => {
     navigate("/login");
   };
 
+  const handleDeleteAccount = async () => {
+    if (!auth.userId) return;
+    
+    try {
+      setDeletingAccount(true);
+      await deleteAccountService.deleteAccount(auth.userId);
+      
+      toast({
+        title: "✅ Cuenta eliminada",
+        description: "Tu cuenta ha sido eliminada correctamente.",
+      });
+      
+      // Limpiar estado y redirigir a login
+      dispatch(clearProfile());
+      dispatch(clearChats());
+      dispatch(clearFeed());
+      dispatch(logoutAction());
+      navigate("/login");
+    } catch (error: any) {
+      console.error("Error eliminando cuenta:", error);
+      toast({
+        title: "❌ Error",
+        description: "No se pudo eliminar la cuenta. Intenta más tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingAccount(false);
+      setShowDeleteAccountModal(false);
+    }
+  };
+
   const toggleEtiqueta = (id: number) => {
     setEditEtiquetas((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -614,13 +650,22 @@ const Profile = () => {
           {/* Top-right buttons */}
           <div className="absolute top-4 right-4 flex gap-2 z-10">
             {!editing && (
-              <button
-                onClick={startEditing}
-                className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full px-4 py-2 text-sm font-bold shadow-lg hover:bg-white/30 transition-all active:scale-95"
-              >
-                <Pencil size={15} />
-                Editar
-              </button>
+              <>
+                <button
+                  onClick={() => setShowDeleteAccountModal(true)}
+                  className="flex items-center gap-1.5 bg-destructive/80 backdrop-blur-sm text-white rounded-full px-4 py-2 text-sm font-bold shadow-lg hover:bg-destructive transition-all active:scale-95"
+                  title="Eliminar cuenta"
+                >
+                  <Trash2 size={15} />
+                </button>
+                <button
+                  onClick={startEditing}
+                  className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full px-4 py-2 text-sm font-bold shadow-lg hover:bg-white/30 transition-all active:scale-95"
+                >
+                  <Pencil size={15} />
+                  Editar
+                </button>
+              </>
             )}
             <button
               onClick={handleLogout}
@@ -1092,6 +1137,44 @@ const Profile = () => {
             >
               Cerrar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Account Modal ── */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-3xl p-6 max-w-sm w-full shadow-xl border border-border">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-destructive/20 p-2 rounded-full">
+                <AlertCircle size={24} className="text-destructive" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground">
+                Eliminar cuenta
+              </h2>
+            </div>
+            <p className="text-muted-foreground mb-6">
+              ¿Estás seguro de que quieres eliminar tu cuenta? Esta acción es permanente y no se puede deshacer. Se eliminarán todos tus datos.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteAccountModal(false)}
+                disabled={deletingAccount}
+                className="flex-1 rounded-2xl border border-border bg-secondary/80 py-3 text-foreground font-bold hover:bg-secondary transition-all active:scale-95 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                className="flex-1 rounded-2xl bg-destructive py-3 text-white font-bold hover:bg-red-600 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingAccount && (
+                  <div className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                )}
+                {deletingAccount ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
           </div>
         </div>
       )}

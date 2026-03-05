@@ -3,6 +3,7 @@ import authReducer from "./slices/authSlice";
 import userReducer from "./slices/userSlice";
 import chatReducer from "./slices/chatSlice";
 import feedReducer from "./slices/feedSlice";
+import privacyReducer from "./slices/privacySlice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     user: userReducer,
     chat: chatReducer,
     feed: feedReducer,
+    privacy: privacyReducer,
   },
 });
 

@@ -58,6 +58,13 @@ const AuthCallback = () => {
         // Esperar a que Redux se actualice
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        // 🗑️ Si la cuenta fue eliminada
+        if (result.deleted) {
+          console.log("🗑️ Cuenta eliminada, redirigiendo a login...");
+          navigate("/login", { replace: true });
+          return;
+        }
+
         if (result.isNewUser) {
           console.log("➡️ Redirigiendo a /create-profile (usuario nuevo)");
           navigate("/create-profile", { replace: true });
