@@ -495,7 +495,7 @@ const Chat = () => {
             {/* Backdrop */}
             <div className="fixed inset-0 bg-black/40 z-40" onClick={closeMenu} />
             {/* Menu bar cubriendo el header */}
-            <div className="gradient-header px-4 py-3 flex items-center justify-between shrink-0 z-50 relative">
+            <div className="gradient-header px-4 py-3 flex items-center justify-between shrink-0 z-50 relative" style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
               <button onClick={closeMenu} className="p-1">
                 <X className="h-6 w-6 text-primary-foreground" />
               </button>
@@ -536,7 +536,7 @@ const Chat = () => {
             </div>
           </>
         ) : (
-          <div className="gradient-header px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="gradient-header px-4 py-3 flex items-center justify-between shrink-0" style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
             <button
               onClick={() => setSelectedChatId(null)}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -910,7 +910,7 @@ const Chat = () => {
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden" style={{ touchAction: 'manipulation', overscrollBehaviorX: 'none' }}>
-      <div className="gradient-header px-4 py-3 flex items-center justify-between shrink-0">
+      <div className="gradient-header px-4 py-3 flex items-center justify-between shrink-0" style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
         <div className="flex items-center gap-2">
           <img src={logoColor} alt="PawTalk" className="h-10 w-10" />
           <span className="text-2xl font-extrabold text-primary-foreground italic">PawTalk</span>

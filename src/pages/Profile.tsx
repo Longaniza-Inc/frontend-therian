@@ -629,7 +629,7 @@ const Profile = () => {
       {/* ─── HEADER ─────────────────────────────── */}
       <div className="relative">
         {/* Cover gradient */}
-        <div className="h-44 gradient-primary relative overflow-hidden">
+        <div className="h-44 gradient-primary relative overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
           <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-transparent" />
           {/* Pattern overlay */}
           <div className="absolute inset-0 opacity-10">

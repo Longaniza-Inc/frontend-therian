@@ -358,7 +358,7 @@ const CreateProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col safe-top">
       {/* Top bar with progress */}
       <div className="px-6 pt-6 pb-2">
         <div className="flex items-center gap-3 mb-4">

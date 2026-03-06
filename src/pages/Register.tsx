@@ -17,7 +17,7 @@ const Register = () => {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-10">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-10 safe-top">
       {/* Privacy Policy Modal */}
       <PrivacyPolicyModal
         open={privacyModalOpen}

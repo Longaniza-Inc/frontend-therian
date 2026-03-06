@@ -91,7 +91,7 @@ const DeleteAccount = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-10">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-10 safe-top">
       {/* Logo */}
       <div className="mb-6 flex flex-col items-center">
         <img src={logoColor} alt="Therian App" className="h-24 w-24 mb-3" />

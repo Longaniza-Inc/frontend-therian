@@ -171,18 +171,13 @@ export const PrivacyAcceptance = ({ onOpenModal }: PrivacyAcceptanceProps) => {
           className="cursor-pointer"
         />
         <label className="text-sm text-muted-foreground flex items-center gap-1 cursor-pointer">
-          Acepto la{" "}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onOpenModal();
-            }}
-            className="text-primary hover:text-primary/80 font-medium underline transition-colors cursor-pointer bg-transparent border-none p-0"
+          Acepto los{" "}
+          <a
+            href="/legal"
+            className="text-primary hover:text-primary/80 font-medium underline transition-colors cursor-pointer"
           >
-            política de privacidad
-          </button>
+            términos legales y política de privacidad
+          </a>
         </label>
       </div>
     </div>

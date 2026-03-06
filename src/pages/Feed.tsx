@@ -478,7 +478,7 @@ const Feed = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col" style={{ touchAction: 'manipulation', overscrollBehaviorX: 'none' }}>
       {/* Top bar */}
-      <div className="gradient-header px-4 py-3 flex items-center justify-between">
+      <div className="gradient-header px-4 py-3 flex items-center justify-between" style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
         <div className="flex items-center gap-2">
           <img src={logoColor} alt="PawTalk" className="h-10 w-10" />
           <span className="text-2xl font-extrabold text-primary-foreground italic">PawTalk</span>
