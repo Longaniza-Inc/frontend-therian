@@ -8,4 +8,7 @@
   status = 200
 
 [env.production]
-  environment = { SECRETS_SCAN_OMIT_KEYS = "VITE_BACKEND_URL" }
+  environment = { 
+    VITE_BACKEND_URL = "https://vps-5719446-x.dattaweb.com",
+    SECRETS_SCAN_OMIT_KEYS = "VITE_BACKEND_URL" 
+  }
