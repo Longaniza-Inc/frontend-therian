@@ -648,7 +648,7 @@ const Profile = () => {
           </div>
 
           {/* Top-right buttons */}
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
+          <div className="absolute right-4 flex gap-2 z-10" style={{ top: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}>
             {!editing && (
               <>
                 <button
@@ -1027,7 +1027,7 @@ const Profile = () => {
 
       {/* ── Editing action bar ── */}
       {editing && (
-        <div className="fixed bottom-[120px] left-0 right-0 px-5 py-3 bg-gradient-to-t from-background/95 via-background/95 to-transparent z-30 border-t border-border">
+        <div className="fixed left-0 right-0 px-5 py-3 bg-gradient-to-t from-background/95 via-background/95 to-transparent z-30 border-t border-border" style={{ bottom: "calc(60px + env(safe-area-inset-bottom, 0px))" }}>
           <div className="flex gap-3">
             <button
               onClick={cancelEditing}

@@ -55,6 +55,7 @@ const CreateProfile = () => {
   const [showProvinces, setShowProvinces] = useState(false);
   const [bio, setBio] = useState("");
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string>("");
   const [additionalPhotoFiles, setAdditionalPhotoFiles] = useState<File[]>([]);
@@ -232,6 +233,8 @@ const CreateProfile = () => {
 
       // Finish — submit profile
       try {
+        setSubmitting(true);
+        
         // Get etiqueta IDs from selected names
         const etiquetaIds = selectedInterests.map(nombre => 
           etiquetas.find(e => e.nombre === nombre)?.id
@@ -270,6 +273,8 @@ const CreateProfile = () => {
         navigate("/feed");
       } catch (error) {
         console.error("Error registering user:", error);
+        alert("Hubo un error al crear tu perfil. Por favor, intenta nuevamente.");
+        setSubmitting(false);
       }
     }
   };
@@ -725,10 +730,17 @@ const CreateProfile = () => {
         <div className="py-6 w-full max-w-sm mx-auto">
           <button
             onClick={handleNext}
-            disabled={!canGoNext()}
-            className="w-full rounded-2xl bg-primary py-4 text-lg font-bold text-primary-foreground shadow-soft hover:bg-primary-hover active:scale-[0.98] transition-all disabled:opacity-40 disabled:active:scale-100"
+            disabled={!canGoNext() || submitting || loading}
+            className="w-full rounded-2xl bg-primary py-4 text-lg font-bold text-primary-foreground shadow-soft hover:bg-primary-hover active:scale-[0.98] transition-all disabled:opacity-40 disabled:active:scale-100 flex items-center justify-center gap-2"
           >
-            {step === TOTAL_STEPS - 1 ? "Finalizar perfil ✨" : step === 2 && !phone.trim() ? "Omitir" : "Continuar"}
+            {submitting || (loading && step === TOTAL_STEPS - 1) ? (
+              <>
+                <div className="h-5 w-5 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
+                <span>Creando perfil...</span>
+              </>
+            ) : (
+              step === TOTAL_STEPS - 1 ? "Finalizar perfil ✨" : step === 2 && !phone.trim() ? "Omitir" : "Continuar"
+            )}
           </button>
         </div>
       </div>

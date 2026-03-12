@@ -10,8 +10,10 @@ import { useChats } from "@/hooks/useChats";
 import { useProfileLoader } from "@/hooks/useProfileLoader";
 import { useDeepLink } from "@/hooks/useDeepLink";
 import { useInitAuth } from "@/hooks/useInitAuth";
+import { useVersionCheck } from "@/hooks/useVersionCheck";
 import { useAppSelector } from "@/hooks/useAppDispatch";
 import LoadingScreen from "@/components/LoadingScreen";
+import UpdateRequiredModal from "@/components/UpdateRequiredModal";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
@@ -30,6 +32,8 @@ const PUBLIC_PATHS = ["/", "/login", "/register", "/auth/callback", "/create-pro
 
 /** Componente interno: carga inicial de chats + perfil + rutas */
 const AppContent = () => {
+  // Verificar si la app necesita actualización (solo en móvil)
+  const { needsUpdate, checking: checkingVersion } = useVersionCheck();
   // Validar y refrescar token si es necesario
   useInitAuth();
   // Carga lista de chats una vez → Redux
@@ -46,6 +50,16 @@ const AppContent = () => {
   const chatsLoaded = useAppSelector((s) => s.chat.chatsLoaded);
 
   console.log("📋 [App] Estado de inicialización - isInitializing:", isInitializing, "isAuthenticated:", isAuthenticated, "path:", location.pathname);
+
+  // Si la app necesita actualización, mostrar modal bloqueante
+  if (needsUpdate) {
+    return <UpdateRequiredModal visible={true} />;
+  }
+
+  // Mostrar pantalla de carga mientras se verifica la versión
+  if (checkingVersion) {
+    return <LoadingScreen />;
+  }
 
   // Mostrar pantalla de carga mientras se valida el token
   if (isInitializing) {
